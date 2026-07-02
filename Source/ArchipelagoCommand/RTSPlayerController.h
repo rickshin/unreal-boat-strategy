@@ -1,0 +1,65 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/PlayerController.h"
+#include "Sim/SimTypes.h"
+#include "RTSPlayerController.generated.h"
+
+class AACGameMode;
+class ARTSCameraPawn;
+class ARTSHUD;
+
+// Input side of the game. Every gameplay action becomes an FSimCommand
+// queued on the game mode; this class never mutates sim state directly.
+UCLASS()
+class ARTSPlayerController : public APlayerController
+{
+	GENERATED_BODY()
+
+public:
+	ARTSPlayerController();
+
+	virtual void SetupInputComponent() override;
+	virtual void PlayerTick(float DeltaTime) override;
+
+	// -- state the HUD reads --------------------------------------------------
+	TArray<FEntityId> Selection;
+	bool bDragging = false;
+	FVector2D DragStart = FVector2D::ZeroVector;
+	FVector2D DragCurrent = FVector2D::ZeroVector;
+	bool bAttackMovePending = false;
+	FName PlacementTpl;                 // structure being placed, NAME_None if idle
+	bool bPlacementValid = false;
+	FString PlacementHint;
+
+	// Ground point under the cursor (sea plane).
+	bool CursorOnSea(FVector2D& OutWorldXY) const;
+
+	// The HUD calls this when a production/build button is clicked.
+	void OnUIButton(int32 Index);
+
+private:
+	void OnSelectPressed();
+	void OnSelectReleased();
+	void OnCommandPressed();
+	void OnAttackMoveKey();
+	void OnStopKey();
+	void OnJumpToHQ();
+	void OnCancelEsc();
+	void OnRestart();
+	void OnHotkey(int32 Index);
+	void AxisCameraX(float V);
+	void AxisCameraY(float V);
+	void AxisZoom(float V);
+
+	void FinishSelection(bool bIsClick);
+	void IssuePointCommand(const FVector2D& WorldXY, bool bAttackMove);
+	FEntityId PickEntityAt(const FVector2D& WorldXY, bool bEnemyOnly) const;
+	void PruneSelection();
+
+	AACGameMode* GM() const;
+	ARTSCameraPawn* CamPawn() const;
+	ARTSHUD* GetRTSHUD() const;
+
+	FVector2D CameraAxis = FVector2D::ZeroVector;
+};
