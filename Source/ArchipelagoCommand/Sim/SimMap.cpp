@@ -39,40 +39,37 @@ void FSimMap::StampIsland(FSimIsland& Island, FSimRng& Rng)
 	}
 }
 
-bool FSimMap::AddNodeOnAdjacentWater(const FSimIsland& Island, EResourceType Type, FSimRng& Rng)
+void FSimMap::PlaceGeysers(const FSimIsland& Island, FSimRng& Rng, int32 MinCount)
 {
-	// Try random coastal cells; node goes on water 1-2 cells off the coast.
-	for (int32 Try = 0; Try < 40; ++Try)
+	// Geysers sit on COASTAL land (a land cell touching water) so the
+	// terrain stays low there and extractors read clearly from the sea.
+	TArray<FIntPoint> Coastal;
+	for (const FIntPoint& C : Island.Cells)
 	{
-		if (Island.Cells.Num() == 0) { return false; }
-		const FIntPoint C = Island.Cells[Rng.RangeInt(0, Island.Cells.Num() - 1)];
-		const int32 DX = Rng.RangeInt(-2, 2);
-		const int32 DY = Rng.RangeInt(-2, 2);
-		const FIntPoint P(C.X + DX, C.Y + DY);
-		if (!IsWater(P.X, P.Y)) { continue; }
+		if (IsWater(C.X + 1, C.Y) || IsWater(C.X - 1, C.Y)
+			|| IsWater(C.X, C.Y + 1) || IsWater(C.X, C.Y - 1))
+		{
+			Coastal.Add(C);
+		}
+	}
+	const int32 Want = FMath::Max(MinCount, Island.bVolcanic ? 2 : 1);
+	int32 Placed = 0;
+	for (int32 Try = 0; Try < 60 && Placed < Want && Coastal.Num() > 0; ++Try)
+	{
+		const FIntPoint C = Coastal[Rng.RangeInt(0, Coastal.Num() - 1)];
 		bool bTooClose = false;
 		for (const FSimResourceNode& N : Nodes)
 		{
-			if (FMath::Abs(N.Cell.X - P.X) + FMath::Abs(N.Cell.Y - P.Y) < 5) { bTooClose = true; break; }
+			if (FMath::Abs(N.Cell.X - C.X) + FMath::Abs(N.Cell.Y - C.Y) < 4) { bTooClose = true; break; }
 		}
 		if (bTooClose) { continue; }
 		FSimResourceNode Node;
 		Node.Id = Nodes.Num();
-		Node.Type = Type;
-		Node.Cell = P;
-		Node.Amount = (Type == EResourceType::Wood) ? 1400.f : 1600.f;
+		Node.Cell = C;
+		Node.Amount = 2500.f;
 		Nodes.Add(Node);
-		return true;
+		++Placed;
 	}
-	return false;
-}
-
-void FSimMap::PlaceNodesForIsland(const FSimIsland& Island, FSimRng& Rng, int32 MinWood, int32 MinIron)
-{
-	int32 NumWood = FMath::Max(MinWood, Rng.RangeInt(1, 2));
-	int32 NumIron = FMath::Max(MinIron, Island.bVolcanic ? 1 : 0);
-	for (int32 i = 0; i < NumWood; ++i) { AddNodeOnAdjacentWater(Island, EResourceType::Wood, Rng); }
-	for (int32 i = 0; i < NumIron; ++i) { AddNodeOnAdjacentWater(Island, EResourceType::Iron, Rng); }
 }
 
 void FSimMap::Generate(uint64 Seed)
@@ -127,41 +124,11 @@ void FSimMap::Generate(uint64 Seed)
 		++Placed;
 	}
 
-	// Resource nodes: home islands are guaranteed a working economy.
+	// Geysers: home islands are guaranteed a working economy.
 	for (int32 i = 0; i < Islands.Num(); ++i)
 	{
 		const bool bHome = (i == HomeIsland[0] || i == HomeIsland[1]);
-		PlaceNodesForIsland(Islands[i], Rng, bHome ? 2 : 1, bHome ? 1 : 0);
-	}
-
-	// Deep-sea iron clusters near the midline, mirrored.
-	for (int32 i = 0; i < 3; ++i)
-	{
-		for (int32 Try = 0; Try < 30; ++Try)
-		{
-			const FVector2f C(Rng.FRange(20.f, Width - 20.f), Rng.FRange(20.f, Height - 20.f));
-			if (FMath::Abs(C.X + C.Y - Width) > 22.f) { continue; }  // near the anti-diagonal
-			const FIntPoint Cell(FMath::FloorToInt32(C.X), FMath::FloorToInt32(C.Y));
-			if (!IsWater(Cell.X, Cell.Y)) { continue; }
-			FSimResourceNode Node;
-			Node.Type = EResourceType::Iron;
-			Node.Amount = 1800.f;
-
-			Node.Id = Nodes.Num();
-			Node.Cell = Cell;
-			Nodes.Add(Node);
-
-			const FVector2f M = MapCenter * 2.f - C;
-			const FIntPoint MCell(FMath::FloorToInt32(M.X), FMath::FloorToInt32(M.Y));
-			if (IsWater(MCell.X, MCell.Y))
-			{
-				FSimResourceNode Node2 = Node;
-				Node2.Id = Nodes.Num();
-				Node2.Cell = MCell;
-				Nodes.Add(Node2);
-			}
-			break;
-		}
+		PlaceGeysers(Islands[i], Rng, bHome ? 2 : 1);
 	}
 
 	// Spawn points: open water offset from each home island toward map center.
@@ -189,13 +156,13 @@ int32 FSimMap::IslandNear(const FVector2f& P, float Range) const
 	return -1;
 }
 
-int32 FSimMap::NodeNear(const FVector2f& P, float Range, EResourceType Type) const
+int32 FSimMap::NodeNear(const FVector2f& P, float Range) const
 {
 	int32 Best = -1;
 	float BestDist = Range;
 	for (const FSimResourceNode& N : Nodes)
 	{
-		if (N.Type != Type || N.Amount <= 0.f) { continue; }
+		if (N.Amount <= 0.f) { continue; }
 		const float D = (FVector2f(N.Cell.X + 0.5f, N.Cell.Y + 0.5f) - P).Size();
 		if (D <= BestDist) { BestDist = D; Best = N.Id; }
 	}

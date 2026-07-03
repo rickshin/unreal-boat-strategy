@@ -27,8 +27,7 @@ static ETargetFilter ParseFilter(const FString& S)
 static EStructureKind ParseKind(const FString& S)
 {
 	if (S == TEXT("hq")) return EStructureKind::HQ;
-	if (S == TEXT("miner_wood")) return EStructureKind::MinerWood;
-	if (S == TEXT("miner_iron")) return EStructureKind::MinerIron;
+	if (S == TEXT("extractor")) return EStructureKind::Extractor;
 	if (S == TEXT("colony")) return EStructureKind::Colony;
 	if (S == TEXT("defense")) return EStructureKind::Defense;
 	return EStructureKind::Outpost;
@@ -55,14 +54,10 @@ static TArray<FWeaponTpl> ParseWeapons(const TSharedPtr<FJsonObject>& Obj)
 	return Out;
 }
 
-static void ParseCost(const TSharedPtr<FJsonObject>& Obj, int32& Wood, int32& Iron)
+static int32 ParseCost(const TSharedPtr<FJsonObject>& Obj)
 {
-	const TSharedPtr<FJsonObject>* Cost;
-	if (Obj->TryGetObjectField(TEXT("cost"), Cost))
-	{
-		Wood = int32((*Cost)->HasField(TEXT("wood")) ? (*Cost)->GetNumberField(TEXT("wood")) : 0.0);
-		Iron = int32((*Cost)->HasField(TEXT("iron")) ? (*Cost)->GetNumberField(TEXT("iron")) : 0.0);
-	}
+	// Single-resource economy: "cost": 120 (bare number).
+	return Obj->HasField(TEXT("cost")) ? int32(Obj->GetNumberField(TEXT("cost"))) : 0;
 }
 
 static TArray<FName> ParseNameArray(const TSharedPtr<FJsonObject>& Obj, const TCHAR* Field)
@@ -122,15 +117,21 @@ bool FContentDB::LoadFromDir(const FString& Dir)
 			T.Id = FName(*Pair.Key);
 			T.Name = U->GetStringField(TEXT("name"));
 			const FString Cls = U->GetStringField(TEXT("class"));
-			T.Domain = (Cls == TEXT("air")) ? EUnitDomain::Air : EUnitDomain::Naval;
-			T.bBuilder = (Cls == TEXT("builder"));
+			// "harvester" = flying builder that works geysers; "ground" = crawler.
+			T.Domain = (Cls == TEXT("air") || Cls == TEXT("harvester")) ? EUnitDomain::Air
+				: (Cls == TEXT("ground")) ? EUnitDomain::Ground : EUnitDomain::Naval;
+			T.bBuilder = (Cls == TEXT("builder") || Cls == TEXT("harvester"));
+			T.bHarvester = (Cls == TEXT("harvester"));
 			T.MaxHp = U->GetNumberField(TEXT("hp"));
 			T.Armor = int32(U->HasField(TEXT("armor")) ? U->GetNumberField(TEXT("armor")) : 0.0);
 			T.Speed = U->GetNumberField(TEXT("speed"));
 			T.Vision = U->HasField(TEXT("vision")) ? U->GetNumberField(TEXT("vision")) : 8.0;
 			T.BuildTime = U->GetNumberField(TEXT("buildTime"));
 			T.RepairRate = U->HasField(TEXT("repairRate")) ? U->GetNumberField(TEXT("repairRate")) : 0.0;
-			ParseCost(U, T.CostWood, T.CostIron);
+			T.Cost = ParseCost(U);
+			if (U->HasField(TEXT("crawler"))) { T.CrawlerId = FName(*U->GetStringField(TEXT("crawler"))); }
+			T.GasCapacity = U->HasField(TEXT("gasCapacity")) ? U->GetNumberField(TEXT("gasCapacity")) : 100.0;
+			T.DockTime = U->HasField(TEXT("dockTime")) ? U->GetNumberField(TEXT("dockTime")) : 10.0;
 			T.Weapons = ParseWeapons(U);
 			T.Builds = ParseNameArray(U, TEXT("builds"));
 			F.Units.Add(T.Id, T);
@@ -148,8 +149,7 @@ bool FContentDB::LoadFromDir(const FString& Dir)
 			T.Armor = int32(S->HasField(TEXT("armor")) ? S->GetNumberField(TEXT("armor")) : 0.0);
 			T.Vision = S->HasField(TEXT("vision")) ? S->GetNumberField(TEXT("vision")) : 8.0;
 			T.BuildTime = S->GetNumberField(TEXT("buildTime"));
-			T.MineRate = S->HasField(TEXT("mineRate")) ? S->GetNumberField(TEXT("mineRate")) : 0.0;
-			ParseCost(S, T.CostWood, T.CostIron);
+			T.Cost = ParseCost(S);
 			T.Weapons = ParseWeapons(S);
 			T.Produces = ParseNameArray(S, TEXT("produces"));
 			F.Structures.Add(T.Id, T);

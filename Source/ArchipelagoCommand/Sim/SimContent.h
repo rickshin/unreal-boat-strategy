@@ -34,17 +34,20 @@ struct FUnitTpl
 	FString Name;
 	EUnitDomain Domain = EUnitDomain::Naval;
 	bool bBuilder = false;
+	bool bHarvester = false;  // flying gas harvester (drops a crawler on geysers)
 	float MaxHp = 100.f;
 	int32 Armor = 0;
 	float Speed = 3.f;        // cells/sec
 	float Vision = 8.f;       // cells
-	int32 CostWood = 0;
-	int32 CostIron = 0;
+	int32 Cost = 0;           // KiTrin
 	float BuildTime = 10.f;   // seconds
 	float RepairRate = 0.f;   // hp/sec (repair vessels)
+	FName CrawlerId;          // harvester: crawler unit it deploys
+	float GasCapacity = 100.f;// harvester: KiTrin per load
+	float DockTime = 10.f;    // harvester: seconds attached to the tube
 	TArray<FWeaponTpl> Weapons;
 	TArray<FName> Builds;     // builder: structure ids; carrier: aircraft ids
-	int32 Value() const { return CostWood + CostIron; }
+	int32 Value() const { return Cost; }
 };
 
 struct FStructTpl
@@ -55,10 +58,8 @@ struct FStructTpl
 	float MaxHp = 400.f;
 	int32 Armor = 2;
 	float Vision = 8.f;
-	int32 CostWood = 0;
-	int32 CostIron = 0;
+	int32 Cost = 0;           // KiTrin
 	float BuildTime = 15.f;
-	float MineRate = 0.f;     // resource/sec for miners
 	TArray<FName> Produces;   // unit ids
 	TArray<FWeaponTpl> Weapons;
 };

@@ -3,30 +3,35 @@
   "display": "Dominion Armada",
   "color": [80, 120, 175],
   "hq": "dom_hq",
-  "builder": "worker_barge",
+  "builder": "gas_harvester",
   "units": {
-    "worker_barge": {
-      "name": "Worker Barge", "class": "builder", "hp": 220, "armor": 2,
-      "speed": 2.2, "vision": 6, "cost": { "wood": 60, "iron": 20 }, "buildTime": 12,
-      "builds": ["timber_rig", "deep_sea_platform", "outpost", "colony", "defense_platform"]
+    "gas_harvester": {
+      "name": "Gas Harvester", "class": "harvester", "hp": 200, "armor": 1,
+      "speed": 3.6, "vision": 8, "cost": 60, "buildTime": 12,
+      "crawler": "dom_crawler", "gasCapacity": 100, "dockTime": 10,
+      "builds": ["outpost", "colony", "defense_platform"]
+    },
+    "dom_crawler": {
+      "name": "Extractor Crawler", "class": "ground", "hp": 80, "armor": 1,
+      "speed": 1.2, "vision": 4, "cost": 0, "buildTime": 1
     },
     "patrol_boat": {
       "name": "Patrol Boat", "class": "naval", "hp": 260, "armor": 2,
-      "speed": 3.4, "vision": 8, "cost": { "wood": 50, "iron": 30 }, "buildTime": 10,
+      "speed": 3.4, "vision": 8, "cost": 65, "buildTime": 10,
       "weapons": [
         { "type": "shell", "damage": 10, "range": 5.5, "reload": 1.0, "projSpeed": 15 }
       ]
     },
     "missile_corvette": {
       "name": "Missile Corvette", "class": "naval", "hp": 300, "armor": 3,
-      "speed": 3.0, "vision": 8, "cost": { "wood": 60, "iron": 90 }, "buildTime": 16,
+      "speed": 3.0, "vision": 8, "cost": 120, "buildTime": 16,
       "weapons": [
         { "type": "missile", "damage": 26, "range": 8.0, "reload": 2.6, "projSpeed": 10 }
       ]
     },
     "destroyer": {
       "name": "Destroyer", "class": "naval", "hp": 520, "armor": 5,
-      "speed": 2.6, "vision": 9, "cost": { "wood": 90, "iron": 140 }, "buildTime": 22,
+      "speed": 2.6, "vision": 9, "cost": 185, "buildTime": 22,
       "weapons": [
         { "type": "shell", "damage": 22, "range": 7.0, "reload": 1.8, "projSpeed": 15 },
         { "type": "aa", "damage": 7, "range": 6.0, "reload": 0.8, "projSpeed": 20, "targets": "air" }
@@ -34,7 +39,7 @@
     },
     "battleship": {
       "name": "Battleship", "class": "naval", "hp": 1100, "armor": 8,
-      "speed": 1.8, "vision": 9, "cost": { "wood": 160, "iron": 300 }, "buildTime": 38,
+      "speed": 1.8, "vision": 9, "cost": 370, "buildTime": 38,
       "weapons": [
         { "type": "shell", "damage": 48, "range": 9.0, "reload": 3.0, "projSpeed": 14 },
         { "type": "aa", "damage": 6, "range": 6.0, "reload": 1.0, "projSpeed": 20, "targets": "air" }
@@ -42,58 +47,54 @@
     },
     "carrier": {
       "name": "Aircraft Carrier", "class": "naval", "hp": 800, "armor": 5,
-      "speed": 1.6, "vision": 10, "cost": { "wood": 140, "iron": 260 }, "buildTime": 36,
+      "speed": 1.6, "vision": 10, "cost": 320, "buildTime": 36,
       "builds": ["interceptor", "bomber"]
     },
     "interceptor": {
       "name": "Interceptor Jet", "class": "air", "hp": 120, "armor": 0,
-      "speed": 5.5, "vision": 9, "cost": { "wood": 40, "iron": 40 }, "buildTime": 8,
+      "speed": 5.5, "vision": 9, "cost": 65, "buildTime": 8,
       "weapons": [
         { "type": "aa", "damage": 14, "range": 5.0, "reload": 1.0, "projSpeed": 22, "targets": "air" }
       ]
     },
     "bomber": {
       "name": "Bomber Aircraft", "class": "air", "hp": 160, "armor": 1,
-      "speed": 4.2, "vision": 8, "cost": { "wood": 50, "iron": 80 }, "buildTime": 12,
+      "speed": 4.2, "vision": 8, "cost": 105, "buildTime": 12,
       "weapons": [
         { "type": "shell", "damage": 60, "range": 3.5, "reload": 4.0, "projSpeed": 12, "targets": "naval" }
       ]
     },
     "repair_vessel": {
       "name": "Repair Vessel", "class": "naval", "hp": 240, "armor": 2,
-      "speed": 2.8, "vision": 7, "cost": { "wood": 70, "iron": 60 }, "buildTime": 14,
+      "speed": 2.8, "vision": 7, "cost": 105, "buildTime": 14,
       "repairRate": 20
     }
   },
   "structures": {
     "dom_hq": {
       "name": "Fortress HQ", "kind": "hq", "hp": 2500, "armor": 8, "vision": 10,
-      "cost": { "wood": 0, "iron": 0 }, "buildTime": 60,
-      "produces": ["worker_barge", "patrol_boat", "missile_corvette", "destroyer", "battleship", "carrier", "repair_vessel"],
+      "cost": 0, "buildTime": 60,
+      "produces": ["gas_harvester", "patrol_boat", "missile_corvette", "destroyer", "battleship", "carrier", "repair_vessel"],
       "weapons": [
         { "type": "shell", "damage": 20, "range": 8.0, "reload": 2.0, "projSpeed": 15 }
       ]
     },
-    "timber_rig": {
-      "name": "Timber Processing Rig", "kind": "miner_wood", "hp": 350, "armor": 2, "vision": 6,
-      "cost": { "wood": 50, "iron": 0 }, "buildTime": 12, "mineRate": 6
-    },
-    "deep_sea_platform": {
-      "name": "Deep-Sea Mining Platform", "kind": "miner_iron", "hp": 380, "armor": 3, "vision": 6,
-      "cost": { "wood": 60, "iron": 40 }, "buildTime": 14, "mineRate": 5
+    "gas_extractor": {
+      "name": "KiTrin Extractor", "kind": "extractor", "hp": 380, "armor": 3, "vision": 6,
+      "cost": 0, "buildTime": 8
     },
     "outpost": {
       "name": "Resource Outpost", "kind": "outpost", "hp": 400, "armor": 3, "vision": 9,
-      "cost": { "wood": 60, "iron": 20 }, "buildTime": 15
+      "cost": 65, "buildTime": 15
     },
     "colony": {
       "name": "Island Colony", "kind": "colony", "hp": 900, "armor": 5, "vision": 9,
-      "cost": { "wood": 120, "iron": 80 }, "buildTime": 28,
-      "produces": ["worker_barge", "patrol_boat", "missile_corvette", "destroyer"]
+      "cost": 160, "buildTime": 28,
+      "produces": ["gas_harvester", "patrol_boat", "missile_corvette", "destroyer"]
     },
     "defense_platform": {
       "name": "Defense Platform", "kind": "defense", "hp": 700, "armor": 6, "vision": 9,
-      "cost": { "wood": 80, "iron": 160 }, "buildTime": 20,
+      "cost": 190, "buildTime": 20,
       "weapons": [
         { "type": "shell", "damage": 24, "range": 8.0, "reload": 1.6, "projSpeed": 15 },
         { "type": "aa", "damage": 9, "range": 7.0, "reload": 0.8, "projSpeed": 20, "targets": "air" }

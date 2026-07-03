@@ -25,26 +25,12 @@ namespace
 			const FOwnerC* O = G.World.Own.Find(Eid);
 			if (!O || O->Player != Player || !G.World.Unit[Eid].bBuilder) { continue; }
 			if (G.World.BuildTask.Contains(Eid)) { continue; }
+			// A harvester mid-cycle is not idle; don't yank it off its geyser.
+			const FHarvestC* HC = G.World.Harvest.Find(Eid);
+			if (HC && HC->State != EHarvestState::None) { continue; }
 			return Eid;
 		}
 		return INVALID_ENTITY;
-	}
-
-	int32 CountStructures(const FSimGame& G, int32 Player, EStructureKind Kind)
-	{
-		int32 N = 0;
-		for (const auto& Pair : G.World.Struct)
-		{
-			const FOwnerC* O = G.World.Own.Find(Pair.Key);
-			if (O && O->Player == Player && Pair.Value.Kind == Kind) { ++N; }
-		}
-		return N;
-	}
-
-	// A water spot from which a miner reaches the node / an outpost reaches the island.
-	FVector2f SiteNearCell(const FSimGame& G, const FIntPoint& Cell)
-	{
-		return G.Map.NearestWater(FVector2f(Cell.X + 0.5f, Cell.Y + 0.5f));
 	}
 
 	// -- strategic layer ------------------------------------------------------
@@ -57,57 +43,71 @@ namespace
 		const FVector2f Home = G.Map.HomeSpawn[Player];
 
 		// Structure ids by kind, from data.
-		FName MinerWoodId, MinerIronId, OutpostId, DefenseId;
+		FName OutpostId, DefenseId;
 		for (const auto& Pair : F.Structures)
 		{
 			switch (Pair.Value.Kind)
 			{
-			case EStructureKind::MinerWood: MinerWoodId = Pair.Key; break;
-			case EStructureKind::MinerIron: MinerIronId = Pair.Key; break;
 			case EStructureKind::Outpost:   OutpostId = Pair.Key; break;
 			case EStructureKind::Defense:   DefenseId = Pair.Key; break;
 			default: break;
 			}
 		}
 
-		// 1) Economy: claim the nearest free node with a mining structure.
+		// Count harvesters and decide whether one should be held back to
+		// found an outpost this pass (otherwise they all fly off to gas).
+		int32 Harvesters = 0;
+		for (const FEntityId Eid : SimSortedKeys(G.World.Harvest))
+		{
+			const FOwnerC* O = G.World.Own.Find(Eid);
+			if (O && O->Player == Player) { ++Harvesters; }
+		}
+		bool bAnyFreeIsland = false;
+		for (const FSimIsland& Isl : G.Map.Islands)
+		{
+			if (Isl.OwnerPlayer < 0) { bAnyFreeIsland = true; break; }
+		}
+		const FStructTpl* OutpostT = OutpostId.IsNone() ? nullptr
+			: G.Content.Structure(Pl.FactionId, OutpostId);
+		const bool bWantExpand = Harvesters >= 2 && bAnyFreeIsland && OutpostT
+			&& G.CanAfford(Player, OutpostT->Cost + 40);
+
+		// 1) Economy: put idle harvesters on the nearest open geyser,
+		// reserving one for expansion when an outpost is on the cards.
+		bool bReservedBuilder = false;
+		for (const FEntityId Eid : SimSortedKeys(G.World.Harvest))
+		{
+			const FOwnerC* O = G.World.Own.Find(Eid);
+			if (!O || O->Player != Player) { continue; }
+			const FHarvestC& HC = G.World.Harvest[Eid];
+			if (HC.State != EHarvestState::None || G.World.BuildTask.Contains(Eid)) { continue; }
+			if (bWantExpand && !bReservedBuilder) { bReservedBuilder = true; continue; }
+			int32 BestNode = -1;
+			float BestDist = TNumericLimits<float>::Max();
+			for (const FSimResourceNode& N : G.Map.Nodes)
+			{
+				if (N.Amount <= 0.f) { continue; }
+				const float Dist = (FVector2f(N.Cell.X + 0.5f, N.Cell.Y + 0.5f) - Home).Size();
+				if (Dist < BestDist) { BestDist = Dist; BestNode = N.Id; }
+			}
+			if (BestNode >= 0)
+			{
+				FSimCommand Cmd;
+				Cmd.Type = ECmdType::Harvest;
+				Cmd.Player = Player;
+				Cmd.Units = { Eid };
+				Cmd.TargetEid = BestNode;
+				G.PendingCommands.Add(Cmd);
+			}
+		}
+
+		// 2) Expansion: outpost on the nearest unclaimed island once the gas
+		// is flowing (two or more harvesters ferrying).
 		const FEntityId Builder = FindIdleBuilder(G, Player);
 		if (Builder != INVALID_ENTITY)
 		{
-			struct FCandidate { FName Tpl; FVector2f At; float Dist; };
-			TOptional<FCandidate> Best;
-			for (const FSimResourceNode& N : G.Map.Nodes)
+			if (bWantExpand)
 			{
-				if (N.ClaimedBy != INVALID_ENTITY || N.Amount <= 0.f) { continue; }
-				const FName Tpl = (N.Type == EResourceType::Wood) ? MinerWoodId : MinerIronId;
-				if (Tpl.IsNone()) { continue; }
-				const FVector2f At = SiteNearCell(G, N.Cell);
-				const float Dist = (At - Home).Size();
-				if (Dist > 45.f) { continue; }   // don't stretch across the map early
-				if (!G.IsValidBuildSite(Player, Tpl, At)) { continue; }
-				const FStructTpl* T = G.Content.Structure(Pl.FactionId, Tpl);
-				if (!T || !G.CanAfford(Player, T->CostWood, T->CostIron)) { continue; }
-				if (!Best.IsSet() || Dist < Best->Dist) { Best = FCandidate{ Tpl, At, Dist }; }
-			}
-			if (Best.IsSet())
-			{
-				FSimCommand Cmd;
-				Cmd.Type = ECmdType::Build;
-				Cmd.Player = Player;
-				Cmd.Units = { Builder };
-				Cmd.Target = Best->At;
-				Cmd.TplId = Best->Tpl;
-				G.PendingCommands.Add(Cmd);
-				return;   // one strategic action per pass keeps decisions readable
-			}
-
-			// 2) Expansion: outpost on the nearest unclaimed island once economy runs.
-			const int32 Miners = CountStructures(G, Player, EStructureKind::MinerWood)
-				+ CountStructures(G, Player, EStructureKind::MinerIron);
-			if (Miners >= 2 && !OutpostId.IsNone())
-			{
-				const FStructTpl* T = G.Content.Structure(Pl.FactionId, OutpostId);
-				if (T && G.CanAfford(Player, T->CostWood + 40, T->CostIron))
 				{
 					int32 BestIsland = -1;
 					float BestDist = TNumericLimits<float>::Max();
@@ -140,7 +140,7 @@ namespace
 
 		// 3) Army composition: keep every production queue busy. Walk the
 		// producer's option list with a rotating cursor weighted toward cheap
-		// units early and capital ships once iron flows.
+		// units early and capital ships once the gas flows.
 		for (const FEntityId Eid : SimSortedKeys(G.World.Prod))
 		{
 			const FOwnerC* O = G.World.Own.Find(Eid);
@@ -148,23 +148,29 @@ namespace
 			const FProdC& Prod = G.World.Prod[Eid];
 			if (Prod.Queue.Num() >= 2 || Prod.Options.Num() == 0) { continue; }
 
-			// Keep one builder alive.
+			// Grow the harvester fleet: 2 baseline, +1 per owned island.
 			if (Prod.Options.Contains(F.BuilderId))
 			{
-				bool bHasBuilder = false;
-				for (const FEntityId U : OwnedUnits(G, Player, false))
+				int32 OwnedIslands = 0;
+				for (const FSimIsland& Isl : G.Map.Islands)
 				{
-					if (G.World.Unit[U].bBuilder) { bHasBuilder = true; break; }
+					if (Isl.OwnerPlayer == Player) { ++OwnedIslands; }
 				}
-				if (!bHasBuilder)
+				const int32 WantHarvesters = 2 + FMath::Max(0, OwnedIslands - 1);
+				if (Harvesters < WantHarvesters)
 				{
-					FSimCommand Cmd;
-					Cmd.Type = ECmdType::Produce;
-					Cmd.Player = Player;
-					Cmd.TargetEid = Eid;
-					Cmd.TplId = F.BuilderId;
-					G.PendingCommands.Add(Cmd);
-					continue;
+					const FUnitTpl* BT = G.Content.Unit(Pl.FactionId, F.BuilderId);
+					if (BT && G.CanAfford(Player, BT->Cost))
+					{
+						FSimCommand Cmd;
+						Cmd.Type = ECmdType::Produce;
+						Cmd.Player = Player;
+						Cmd.TargetEid = Eid;
+						Cmd.TplId = F.BuilderId;
+						G.PendingCommands.Add(Cmd);
+						++Harvesters;   // count the one we just queued
+						continue;
+					}
 				}
 			}
 
@@ -174,9 +180,9 @@ namespace
 				const FName Opt = Prod.Options[(S.CompositionCursor + Try) % Prod.Options.Num()];
 				const FUnitTpl* T = G.Content.Unit(Pl.FactionId, Opt);
 				if (!T || T->bBuilder || T->Weapons.Num() == 0) { continue; }
-				// Save iron for capital ships only when rich.
-				if (T->Value() > 250 && Pl.Iron < T->CostIron + 100) { continue; }
-				if (!G.CanAfford(Player, T->CostWood, T->CostIron)) { continue; }
+				// Save up before splurging on capital ships.
+				if (T->Value() > 250 && Pl.KiTrin < T->Cost + 100) { continue; }
+				if (!G.CanAfford(Player, T->Cost)) { continue; }
 				FSimCommand Cmd;
 				Cmd.Type = ECmdType::Produce;
 				Cmd.Player = Player;

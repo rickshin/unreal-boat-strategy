@@ -110,7 +110,7 @@ build the `ArchipelagoCommandEditor` target, open, press Play.
 | Input | Action |
 |---|---|
 | Left-drag / left-click | Select units (Shift adds) |
-| Right-click | Move; on an enemy: attack; on minimap: move there |
+| Right-click | Move; on an enemy: attack; on a geyser (harvester selected): harvest; on minimap: move there |
 | `Q` then click | Attack-move (engage everything on the way) |
 | `H` | Stop (halt) |
 | `V` | Direct control: over-the-shoulder view of the selected unit; `V`/`Esc` returns overhead |
@@ -125,11 +125,11 @@ build the `ArchipelagoCommandEditor` target, open, press Play.
 | `Esc` | Exit unit view, cancel placement/attack-move, clear selection, quit |
 | `R` (after game over) | New match |
 
-Build structures by selecting your builder (Worker Barge / Mobile Command
-Vessel), pressing a structure hotkey, and clicking a valid site: mining
-rigs go next to resource nodes (kelp = wood, wrecks = iron), outposts and
-colonies next to islands — completing one claims the island. Destroy the
-enemy command structure to win.
+Your Gas Harvester is also your builder: select it, press a structure
+hotkey, and click a valid site — outposts and colonies go next to
+islands (completing one claims the island). Gas extractors are never
+placed by hand: right-click a geyser and the harvester's crawler builds
+one automatically. Destroy the enemy command structure to win.
 
 ## Architecture: sim / render split
 
@@ -192,8 +192,16 @@ Gameplay concepts (unchanged from the original design):
   carriers, repair vessels, fortified HQ) vs *Tempest Swarm* (fast, cheap,
   fragile: skimmer swarms, torpedoes, EW disruption). Stats in
   `Content/Data/dominion.json` / `tempest.json`.
-- **Economy** — structure-based: mining rigs placed near wood/iron nodes
-  extract automatically and deplete the node; no worker harvesting.
+- **Economy** — a single resource: **KiTrin**, a shining orange gas
+  vented by island geysers (glowing, star-spraying vents on the coasts);
+  it can be shaped into nearly anything, so everything costs KiTrin.
+  Flying **Gas Harvesters** (built by the HQ) work the geysers: fly to
+  an untapped geyser, drop a **crawler** that walks on and unfolds into
+  a **gas extractor**, then dock on the extractor's tube for 10 seconds
+  to load **100 gas** and ferry it home to the HQ or a colony,
+  repeating until the geyser is spent. Right-click a geyser with a
+  harvester selected to start the cycle. Harvesters double as the
+  faction's builders (outposts, colonies, defense platforms).
 - **Expansion** — builders place outposts/colonies adjacent to islands to
   claim them; colonies are secondary production bases.
 - **Combat** — centralized damage calc with armor mitigation (6 %/point,

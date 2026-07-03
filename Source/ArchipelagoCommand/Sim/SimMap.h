@@ -17,13 +17,16 @@ struct FSimIsland
 	bool bVolcanic = false;      // iron source flavor
 };
 
+// A KiTrin geyser: an orange, star-venting fissure on island land. A gas
+// extractor built on top claims it; flying harvesters dock to carry the
+// gas home.
 struct FSimResourceNode
 {
 	int32 Id = -1;
-	EResourceType Type = EResourceType::Wood;
-	FIntPoint Cell = FIntPoint::ZeroValue;
-	float Amount = 1500.f;
-	FEntityId ClaimedBy = INVALID_ENTITY;  // mining structure on this node
+	EResourceType Type = EResourceType::KiTrin;
+	FIntPoint Cell = FIntPoint::ZeroValue;   // a LAND cell (coastal)
+	float Amount = 2500.f;
+	FEntityId ClaimedBy = INVALID_ENTITY;    // the extractor on this geyser
 };
 
 struct FSimMap
@@ -44,13 +47,12 @@ struct FSimMap
 
 	// Island id whose land is within Range cells of P, else -1.
 	int32 IslandNear(const FVector2f& P, float Range) const;
-	// Node index within Range cells of P, of the given type, else -1.
-	int32 NodeNear(const FVector2f& P, float Range, EResourceType Type) const;
+	// Geyser index within Range cells of P (with gas remaining), else -1.
+	int32 NodeNear(const FVector2f& P, float Range) const;
 	// Nearest water cell center to P (spiral search).
 	FVector2f NearestWater(const FVector2f& P) const;
 
 private:
 	void StampIsland(FSimIsland& Island, FSimRng& Rng);
-	void PlaceNodesForIsland(const FSimIsland& Island, FSimRng& Rng, int32 MinWood, int32 MinIron);
-	bool AddNodeOnAdjacentWater(const FSimIsland& Island, EResourceType Type, FSimRng& Rng);
+	void PlaceGeysers(const FSimIsland& Island, FSimRng& Rng, int32 MinCount);
 };

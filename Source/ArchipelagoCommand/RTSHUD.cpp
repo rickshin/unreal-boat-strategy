@@ -60,15 +60,15 @@ void ARTSHUD::DrawTopBar()
 	const int32 Me = GM->LocalPlayer();
 	const FSimPlayer& Pl = G.Players[Me];
 
-	FString Line = FString::Printf(TEXT("Wood %d    Iron %d    |  %s"),
-		FMath::FloorToInt32(Pl.Wood), FMath::FloorToInt32(Pl.Iron),
+	FString Line = FString::Printf(TEXT("KiTrin %d    |  %s"),
+		FMath::FloorToInt32(Pl.KiTrin),
 		*G.FactionOf(Me).DisplayName);
 	if (GM->IsSpectating())
 	{
 		const FSimPlayer& P1 = G.Players[1];
-		Line = FString::Printf(TEXT("SPECTATE  |  %s  W%d/I%d   vs   %s  W%d/I%d"),
-			*G.FactionOf(0).DisplayName, FMath::FloorToInt32(Pl.Wood), FMath::FloorToInt32(Pl.Iron),
-			*G.FactionOf(1).DisplayName, FMath::FloorToInt32(P1.Wood), FMath::FloorToInt32(P1.Iron));
+		Line = FString::Printf(TEXT("SPECTATE  |  %s  K%d   vs   %s  K%d"),
+			*G.FactionOf(0).DisplayName, FMath::FloorToInt32(Pl.KiTrin),
+			*G.FactionOf(1).DisplayName, FMath::FloorToInt32(P1.KiTrin));
 	}
 	DrawText(Line, TextMain, 12.f, 7.f, Font);
 
@@ -134,26 +134,26 @@ void ARTSHUD::DrawSelectionPanel()
 	for (int32 i = 0; i < Options.Num() && i < 9; ++i)
 	{
 		FString Name;
-		int32 Wood = 0, Iron = 0;
+		int32 Cost = 0;
 		if (bBuilder)
 		{
 			if (const FStructTpl* T = G.Content.Structure(G.Players[Me].FactionId, Options[i]))
 			{
-				Name = T->Name; Wood = T->CostWood; Iron = T->CostIron;
+				Name = T->Name; Cost = T->Cost;
 			}
 		}
 		else if (const FUnitTpl* T = G.Content.Unit(G.Players[Me].FactionId, Options[i]))
 		{
-			Name = T->Name; Wood = T->CostWood; Iron = T->CostIron;
+			Name = T->Name; Cost = T->Cost;
 		}
 		if (Name.IsEmpty()) { continue; }
 
-		const bool bAfford = G.CanAfford(Me, Wood, Iron);
+		const bool bAfford = G.CanAfford(Me, Cost);
 		DrawRect(bAfford ? FLinearColor(0.10f, 0.16f, 0.24f, 0.95f) : FLinearColor(0.12f, 0.06f, 0.06f, 0.95f),
 			X, Y, BtnW, BtnH);
 		DrawText(FString::Printf(TEXT("%d. %s"), i + 1, *Name), bAfford ? TextMain : TextDim,
 			X + 6.f, Y + 5.f, Font);
-		DrawText(FString::Printf(TEXT("W%d  I%d"), Wood, Iron), TextDim, X + 6.f, Y + 22.f, Font);
+		DrawText(FString::Printf(TEXT("K%d"), Cost), TextDim, X + 6.f, Y + 22.f, Font);
 		Buttons.Add({ FVector2D(X, Y), FVector2D(BtnW, BtnH), Name });
 		X += BtnW + Gap;
 		if (X + BtnW > PanelW) { break; }
@@ -250,7 +250,7 @@ void ARTSHUD::RefreshMinimapTexture()
 		if (!bAll && !G.Players[Me].Explored[Idx]) { continue; }
 		const int32 Px = N.Cell.Y;
 		const int32 Py = W - 1 - N.Cell.X;
-		Pixels[Py * W + Px] = (N.Type == EResourceType::Wood) ? FColor(80, 200, 60) : FColor(220, 140, 40);
+		Pixels[Py * W + Px] = FColor(255, 150, 20);   // KiTrin geysers glow orange
 	}
 
 	void* Data = MinimapTex->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE);

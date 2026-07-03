@@ -25,7 +25,8 @@ private:
 	TObjectPtr<UProceduralMeshComponent> Mesh;
 };
 
-// Visual marker for a resource node: kelp cluster (wood) or wreck (iron).
+// Visual marker for a KiTrin geyser: a rocky vent with a shining orange
+// core that sprays glittering star-like motes (Niagara, render-only).
 UCLASS()
 class ANodeDecorActor : public AActor
 {
@@ -41,4 +42,7 @@ public:
 private:
 	UPROPERTY()
 	TObjectPtr<USceneComponent> Root;
+
+	UPROPERTY()
+	TObjectPtr<class UNiagaraComponent> Stars;
 };

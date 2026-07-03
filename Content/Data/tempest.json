@@ -3,37 +3,42 @@
   "display": "Tempest Swarm",
   "color": [60, 190, 160],
   "hq": "hive_bastion",
-  "builder": "mobile_command_vessel",
+  "builder": "spore_harvester",
   "units": {
-    "mobile_command_vessel": {
-      "name": "Mobile Command Vessel", "class": "builder", "hp": 260, "armor": 1,
-      "speed": 2.8, "vision": 7, "cost": { "wood": 60, "iron": 20 }, "buildTime": 12,
-      "builds": ["bio_node", "harvest_spire", "tide_outpost", "spawn_colony", "reef_bastion"]
+    "spore_harvester": {
+      "name": "Spore Harvester", "class": "harvester", "hp": 170, "armor": 0,
+      "speed": 4.2, "vision": 8, "cost": 55, "buildTime": 11,
+      "crawler": "spore_crawler", "gasCapacity": 100, "dockTime": 10,
+      "builds": ["tide_outpost", "spawn_colony", "reef_bastion"]
+    },
+    "spore_crawler": {
+      "name": "Spore Crawler", "class": "ground", "hp": 70, "armor": 0,
+      "speed": 1.4, "vision": 4, "cost": 0, "buildTime": 1
     },
     "scout_skimmer": {
       "name": "Scout Skimmer", "class": "naval", "hp": 90, "armor": 0,
-      "speed": 5.0, "vision": 10, "cost": { "wood": 25, "iron": 0 }, "buildTime": 5,
+      "speed": 5.0, "vision": 10, "cost": 25, "buildTime": 5,
       "weapons": [
         { "type": "shell", "damage": 4, "range": 4.0, "reload": 0.9, "projSpeed": 16 }
       ]
     },
     "fast_attack_boat": {
       "name": "Fast Attack Boat", "class": "naval", "hp": 150, "armor": 1,
-      "speed": 4.2, "vision": 8, "cost": { "wood": 40, "iron": 20 }, "buildTime": 8,
+      "speed": 4.2, "vision": 8, "cost": 50, "buildTime": 8,
       "weapons": [
         { "type": "shell", "damage": 9, "range": 5.0, "reload": 0.8, "projSpeed": 16 }
       ]
     },
     "torpedo_skimmer": {
       "name": "Torpedo Skimmer", "class": "naval", "hp": 130, "armor": 0,
-      "speed": 3.8, "vision": 8, "cost": { "wood": 45, "iron": 45 }, "buildTime": 10,
+      "speed": 3.8, "vision": 8, "cost": 80, "buildTime": 10,
       "weapons": [
         { "type": "torpedo", "damage": 40, "range": 6.5, "reload": 3.0, "projSpeed": 8, "targets": "naval" }
       ]
     },
     "assault_cruiser": {
       "name": "Assault Cruiser", "class": "naval", "hp": 450, "armor": 4,
-      "speed": 2.8, "vision": 8, "cost": { "wood": 80, "iron": 120 }, "buildTime": 20,
+      "speed": 2.8, "vision": 8, "cost": 165, "buildTime": 20,
       "weapons": [
         { "type": "shell", "damage": 20, "range": 6.5, "reload": 1.6, "projSpeed": 15 },
         { "type": "aa", "damage": 6, "range": 5.5, "reload": 0.9, "projSpeed": 20, "targets": "air" }
@@ -41,33 +46,33 @@
     },
     "drone_carrier": {
       "name": "Drone Carrier", "class": "naval", "hp": 520, "armor": 3,
-      "speed": 2.2, "vision": 10, "cost": { "wood": 110, "iron": 180 }, "buildTime": 28,
+      "speed": 2.2, "vision": 10, "cost": 240, "buildTime": 28,
       "builds": ["swarm_interceptor", "strike_bomber"]
     },
     "gunship": {
       "name": "Gunship", "class": "air", "hp": 200, "armor": 1,
-      "speed": 3.6, "vision": 8, "cost": { "wood": 50, "iron": 60 }, "buildTime": 12,
+      "speed": 3.6, "vision": 8, "cost": 90, "buildTime": 12,
       "weapons": [
         { "type": "shell", "damage": 12, "range": 5.0, "reload": 1.0, "projSpeed": 16 }
       ]
     },
     "swarm_interceptor": {
       "name": "Swarm Interceptor", "class": "air", "hp": 100, "armor": 0,
-      "speed": 6.0, "vision": 9, "cost": { "wood": 35, "iron": 35 }, "buildTime": 7,
+      "speed": 6.0, "vision": 9, "cost": 60, "buildTime": 7,
       "weapons": [
         { "type": "aa", "damage": 12, "range": 5.0, "reload": 0.9, "projSpeed": 22, "targets": "air" }
       ]
     },
     "strike_bomber": {
       "name": "Strike Bomber", "class": "air", "hp": 130, "armor": 0,
-      "speed": 4.6, "vision": 8, "cost": { "wood": 45, "iron": 70 }, "buildTime": 11,
+      "speed": 4.6, "vision": 8, "cost": 95, "buildTime": 11,
       "weapons": [
         { "type": "shell", "damage": 46, "range": 3.5, "reload": 3.5, "projSpeed": 12, "targets": "naval" }
       ]
     },
     "ew_disruptor": {
       "name": "EW Disruptor Craft", "class": "naval", "hp": 180, "armor": 1,
-      "speed": 3.4, "vision": 9, "cost": { "wood": 60, "iron": 80 }, "buildTime": 14,
+      "speed": 3.4, "vision": 9, "cost": 115, "buildTime": 14,
       "weapons": [
         { "type": "disrupt", "damage": 3, "range": 7.0, "reload": 2.0, "projSpeed": 14 }
       ]
@@ -76,32 +81,28 @@
   "structures": {
     "hive_bastion": {
       "name": "Hive Bastion", "kind": "hq", "hp": 2100, "armor": 6, "vision": 10,
-      "cost": { "wood": 0, "iron": 0 }, "buildTime": 60,
-      "produces": ["mobile_command_vessel", "scout_skimmer", "fast_attack_boat", "torpedo_skimmer", "assault_cruiser", "drone_carrier", "gunship", "ew_disruptor"],
+      "cost": 0, "buildTime": 60,
+      "produces": ["spore_harvester", "scout_skimmer", "fast_attack_boat", "torpedo_skimmer", "assault_cruiser", "drone_carrier", "gunship", "ew_disruptor"],
       "weapons": [
         { "type": "shell", "damage": 16, "range": 8.0, "reload": 1.6, "projSpeed": 15 }
       ]
     },
-    "bio_node": {
-      "name": "Bio-Assimilation Node", "kind": "miner_wood", "hp": 300, "armor": 1, "vision": 6,
-      "cost": { "wood": 45, "iron": 0 }, "buildTime": 10, "mineRate": 7
-    },
-    "harvest_spire": {
-      "name": "Corrosive Harvest Spire", "kind": "miner_iron", "hp": 320, "armor": 2, "vision": 6,
-      "cost": { "wood": 55, "iron": 35 }, "buildTime": 12, "mineRate": 5.5
+    "spore_extractor": {
+      "name": "Spore Extractor", "kind": "extractor", "hp": 330, "armor": 2, "vision": 6,
+      "cost": 0, "buildTime": 7
     },
     "tide_outpost": {
       "name": "Tide Outpost", "kind": "outpost", "hp": 340, "armor": 2, "vision": 10,
-      "cost": { "wood": 50, "iron": 15 }, "buildTime": 12
+      "cost": 55, "buildTime": 12
     },
     "spawn_colony": {
       "name": "Spawning Colony", "kind": "colony", "hp": 750, "armor": 4, "vision": 9,
-      "cost": { "wood": 100, "iron": 70 }, "buildTime": 24,
-      "produces": ["mobile_command_vessel", "scout_skimmer", "fast_attack_boat", "torpedo_skimmer", "gunship"]
+      "cost": 140, "buildTime": 24,
+      "produces": ["spore_harvester", "scout_skimmer", "fast_attack_boat", "torpedo_skimmer", "gunship"]
     },
     "reef_bastion": {
       "name": "Reef Bastion", "kind": "defense", "hp": 550, "armor": 4, "vision": 9,
-      "cost": { "wood": 70, "iron": 120 }, "buildTime": 16,
+      "cost": 155, "buildTime": 16,
       "weapons": [
         { "type": "shell", "damage": 18, "range": 7.5, "reload": 1.2, "projSpeed": 16 },
         { "type": "aa", "damage": 8, "range": 7.0, "reload": 0.8, "projSpeed": 20, "targets": "air" }

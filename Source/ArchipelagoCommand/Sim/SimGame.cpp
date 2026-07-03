@@ -84,6 +84,7 @@ FEntityId FSimGame::SpawnUnit(int32 Player, FName TplId, const FVector2f& At)
 		World.Combat.Add(E, MoveTemp(C));
 	}
 	if (T->RepairRate > 0.f) { World.Repair.Add(E, { T->RepairRate, 4.f }); }
+	if (T->bHarvester) { World.Harvest.Add(E, FHarvestC()); }
 	if (T->Builds.Num() > 0 && !T->bBuilder)   // carrier: produces aircraft
 	{
 		FProdC Prod;
@@ -122,16 +123,33 @@ FEntityId FSimGame::SpawnStructure(int32 Player, FName TplId, const FVector2f& A
 		Prod.Options = T->Produces;
 		World.Prod.Add(E, MoveTemp(Prod));
 	}
-	if (T->Kind == EStructureKind::MinerWood || T->Kind == EStructureKind::MinerIron)
+	if (T->Kind == EStructureKind::Extractor)
 	{
-		const EResourceType Res = (T->Kind == EStructureKind::MinerWood) ? EResourceType::Wood : EResourceType::Iron;
-		const int32 Node = Map.NodeNear(At, 2.5f, Res);
-		World.Miner.Add(E, { Node, T->MineRate });
+		const int32 Node = Map.NodeNear(At, 1.5f);
 		FStructC& SC = World.Struct[E];
 		SC.NodeId = Node;
 		if (Node >= 0) { Map.Nodes[Node].ClaimedBy = E; }
 	}
 	return E;
+}
+
+bool FSimGame::FindDepot(int32 Player, const FVector2f& From, FVector2f& OutPos) const
+{
+	FEntityId Best = INVALID_ENTITY;
+	float BestDist = TNumericLimits<float>::Max();
+	for (const auto& Pair : World.Struct)
+	{
+		if (Pair.Value.Kind != EStructureKind::HQ && Pair.Value.Kind != EStructureKind::Colony) { continue; }
+		if (!Pair.Value.bComplete) { continue; }
+		const FOwnerC* O = World.Own.Find(Pair.Key);
+		const FPosC* P = World.Pos.Find(Pair.Key);
+		if (!O || O->Player != Player || !P) { continue; }
+		const float D = (P->P - From).Size();
+		if (D < BestDist || (D == BestDist && Pair.Key < Best)) { BestDist = D; Best = Pair.Key; }
+	}
+	if (Best == INVALID_ENTITY) { return false; }
+	OutPos = World.Pos[Best].P;
+	return true;
 }
 
 bool FSimGame::IsVisibleTo(int32 Player, const FVector2f& P) const
@@ -161,15 +179,14 @@ bool FSimGame::IsValidBuildSite(int32 Player, FName TplId, const FVector2f& At, 
 
 	switch (T->Kind)
 	{
-	case EStructureKind::MinerWood:
-	case EStructureKind::MinerIron:
+	case EStructureKind::Extractor:
 	{
-		const EResourceType Res = (T->Kind == EStructureKind::MinerWood) ? EResourceType::Wood : EResourceType::Iron;
-		const int32 Node = Map.NodeNear(At, 2.5f, Res);
-		if (Node < 0) { if (WhyNot) { *WhyNot = TEXT("Needs a resource node nearby"); } return false; }
+		// Extractors are deployed by crawlers, directly on an open geyser.
+		const int32 Node = Map.NodeNear(At, 1.5f);
+		if (Node < 0) { if (WhyNot) { *WhyNot = TEXT("Needs a geyser"); } return false; }
 		if (Map.Nodes[Node].ClaimedBy != INVALID_ENTITY)
 		{
-			if (WhyNot) { *WhyNot = TEXT("Node already mined"); }
+			if (WhyNot) { *WhyNot = TEXT("Geyser already tapped"); }
 			return false;
 		}
 		return true;
@@ -235,8 +252,7 @@ uint64 FSimGame::StateHash() const
 	H.Add(uint64(Tick));
 	for (int32 P = 0; P < 2; ++P)
 	{
-		H.AddF(Players[P].Wood);
-		H.AddF(Players[P].Iron);
+		H.AddF(Players[P].KiTrin);
 	}
 	TArray<FEntityId> Ids = World.Alive.Array();
 	Ids.Sort();

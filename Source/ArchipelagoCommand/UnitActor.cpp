@@ -127,6 +127,34 @@ void AUnitActor::BuildBoat(float Length, float Beam, float Height, const FLinear
 	BobDamp = FMath::Clamp(900.f / Length, 0.35f, 1.f);
 }
 
+void AUnitActor::BuildHarvester(const FLinearColor& Color)
+{
+	// A chunky lifter drone: body, two side gas tanks, rotor disc, and an
+	// orange intake that mates with the extractor tube.
+	const FLinearColor Dark = Color * 0.5f + FLinearColor(0.1f, 0.1f, 0.1f);
+	AddBox(FVector(0, 0, 0), FVector(3.2f, 2.0f, 1.3f), Color);
+	AddShape(AC_MESH_CYLINDER, FVector(0, -130.f, -10.f), FVector(0.8f, 0.8f, 1.9f), Dark);
+	AddShape(AC_MESH_CYLINDER, FVector(0, 130.f, -10.f), FVector(0.8f, 0.8f, 1.9f), Dark);
+	AddShape(AC_MESH_CYLINDER, FVector(0, 0, 95.f), FVector(2.6f, 2.6f, 0.10f), Dark);
+	AddShape(AC_MESH_CYLINDER, FVector(0, 0, -90.f), FVector(0.5f, 0.5f, 0.6f),
+		FLinearColor(2.2f, 0.85f, 0.08f));   // glowing intake
+	RingRadius = 420.f;
+	BobDamp = 0.f;
+}
+
+void AUnitActor::BuildCrawler(const FLinearColor& Color)
+{
+	// Low tracked box that unfolds into the extractor.
+	const FLinearColor Tread(0.08f, 0.08f, 0.08f);
+	AddBox(FVector(0, 0, 55.f), FVector(1.6f, 1.1f, 0.7f), Color);
+	AddBox(FVector(0, -70.f, 25.f), FVector(1.9f, 0.5f, 0.5f), Tread);
+	AddBox(FVector(0, 70.f, 25.f), FVector(1.9f, 0.5f, 0.5f), Tread);
+	AddShape(AC_MESH_SPHERE, FVector(70.f, 0, 95.f), FVector(0.35f),
+		FLinearColor(2.2f, 0.85f, 0.08f));
+	RingRadius = 260.f;
+	BobDamp = 0.f;
+}
+
 void AUnitActor::BuildAircraft(float Size, const FLinearColor& Color)
 {
 	// Fuselage + swept wing + tail, all flattened boxes.
@@ -149,11 +177,13 @@ void AUnitActor::BuildStructure(EStructureKind Kind, const FLinearColor& Color, 
 		AddShape(AC_MESH_SPHERE, FVector(120, 120, 460), FVector(0.9f, 0.9f, 0.9f), FLinearColor(0.9f, 0.85f, 0.5f));
 		RingRadius = 1500.f;
 		break;
-	case EStructureKind::MinerWood:
-	case EStructureKind::MinerIron:
-		AddBox(FVector(0, 0, 30), FVector(3.4f, 3.4f, 0.7f), Color);
-		AddShape(AC_MESH_CYLINDER, FVector(0, 0, 170), FVector(0.7f, 0.7f, 2.4f),
-			Kind == EStructureKind::MinerWood ? FLinearColor(0.16f, 0.4f, 0.12f) : FLinearColor(0.35f, 0.2f, 0.1f));
+	case EStructureKind::Extractor:
+		// Dome over the geyser with the docking TUBE on top: harvesters
+		// clamp onto the glowing collar to fill their tanks.
+		AddShape(AC_MESH_SPHERE, FVector(0, 0, 60), FVector(2.8f, 2.8f, 1.5f), Color);
+		AddShape(AC_MESH_CYLINDER, FVector(0, 0, 330), FVector(0.42f, 0.42f, 4.2f), Dark);
+		AddShape(AC_MESH_CYLINDER, FVector(0, 0, 540), FVector(0.65f, 0.65f, 0.35f),
+			FLinearColor(2.6f, 1.0f, 0.10f));   // glowing tube collar
 		RingRadius = 900.f;
 		break;
 	case EStructureKind::Outpost:
@@ -198,7 +228,16 @@ void AUnitActor::InitFor(const FSimGame& G, FEntityId InEid)
 		const FUnitTpl* T = G.Content.Unit(G.Players[OwnerPlayer].FactionId, U.Tpl);
 		DisplayName = T ? T->Name : TEXT("Unit");
 		bIsAir = U.Domain == EUnitDomain::Air;
-		if (bIsAir)
+		bIsGround = U.Domain == EUnitDomain::Ground;
+		if (bIsGround)
+		{
+			BuildCrawler(Color);
+		}
+		else if (bIsAir && T && T->bHarvester)
+		{
+			BuildHarvester(Color);
+		}
+		else if (bIsAir)
 		{
 			BuildAircraft(700.f, Color);
 		}
@@ -246,9 +285,15 @@ void AUnitActor::UpdateVisual(float Alpha, float WorldTime)
 	const float FacingLerp = PrevFacing + FMath::FindDeltaAngleRadians(PrevFacing, CurrFacing) * Alpha;
 	FRotator Rot(0.f, FMath::RadiansToDegrees(FacingLerp), 0.f);
 
-	if (bIsAir)
+	if (bIsGround)
 	{
-		Z = AC_AIR_ALTITUDE + FMath::Sin(WorldTime * 1.7f + Eid) * 40.f;
+		Z = 90.f;   // crawlers hug the (low, coastal) terrain
+	}
+	else if (bIsAir)
+	{
+		// Ease toward the target altitude: harvesters sink onto the tube.
+		CurAirZ += (AirTargetZ - CurAirZ) * 0.045f;
+		Z = CurAirZ + FMath::Sin(WorldTime * 1.7f + Eid) * (AirTargetZ < 2000.f ? 8.f : 40.f);
 	}
 	else if (BobDamp > 0.f)
 	{

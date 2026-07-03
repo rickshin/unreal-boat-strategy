@@ -263,7 +263,12 @@ void AACGameMode::StartMatch(uint64 Seed)
 		}
 	}
 
-	UE_LOG(LogACGame, Log, TEXT("Match started: seed %llu, hash %llu"), Seed, SimGame->StateHash());
+	UE_LOG(LogACGame, Log, TEXT("Match started: seed %llu, hash %llu, %d geysers"),
+		Seed, SimGame->StateHash(), SimGame->Map.Nodes.Num());
+	for (const FSimResourceNode& N : SimGame->Map.Nodes)
+	{
+		UE_LOG(LogACGame, Verbose, TEXT("  geyser %d at (%d,%d)"), N.Id, N.Cell.X, N.Cell.Y);
+	}
 }
 
 bool AACGameMode::TrySpawnPluginOcean()
@@ -489,6 +494,15 @@ void AACGameMode::SyncEntityActors()
 		Actor->SetSimState(P.P, P.Facing,
 			H ? H->Hp / H->MaxHp : 1.f,
 			S ? S->Progress : 1.f);
+
+		// Harvesters descend to the extractor tube while docked/waiting.
+		if (const FHarvestC* HC = G.World.Harvest.Find(Eid))
+		{
+			Actor->AirTargetZ =
+				HC->State == EHarvestState::Docked ? 640.f
+				: HC->State == EHarvestState::WaitBuild ? 1200.f
+				: AC_AIR_ALTITUDE;
+		}
 
 		// Fog of war: hide enemies outside the local player's vision.
 		const bool bMine = G.World.Own[Eid].Player == LocalPlayer();

@@ -33,7 +33,8 @@ struct FStructC
 	bool bComplete = false;
 	float Progress = 0.f;          // 0..1 construction
 	int32 IslandId = -1;           // claimed island (outpost/colony)
-	int32 NodeId = -1;             // mined node (miners)
+	int32 NodeId = -1;             // claimed geyser (extractors)
+	FEntityId DockedHarvester = INVALID_ENTITY;   // extractor tube occupancy
 };
 
 struct FHealthC
@@ -73,7 +74,22 @@ struct FProdC
 	TArray<FName> Options;         // what this producer may build
 };
 
-struct FMinerC { int32 NodeId = -1; float Rate = 5.f; float Accum = 0.f; };
+// The flying gas harvester's work cycle: fly to a geyser, deploy a crawler
+// (which becomes the extractor), dock on the extractor's tube to fill up,
+// carry the gas to the nearest depot (HQ/colony), repeat.
+enum class EHarvestState : uint8 { None, ToGeyser, WaitBuild, Docked, Deliver };
+
+struct FHarvestC
+{
+	EHarvestState State = EHarvestState::None;
+	int32 NodeId = -1;                 // target geyser
+	FEntityId Crawler = INVALID_ENTITY;
+	int32 DockTicksLeft = 0;
+	float GasHeld = 0.f;
+};
+
+// A deployed crawler: walks to its geyser and becomes the extractor.
+struct FCrawlC { int32 NodeId = -1; };
 
 struct FRepairC { float Rate = 15.f; float Range = 4.f; };
 
@@ -125,7 +141,8 @@ struct FSimWorld
 	TMap<FEntityId, FMoverC> Mover;
 	TMap<FEntityId, FCombatC> Combat;
 	TMap<FEntityId, FProdC> Prod;
-	TMap<FEntityId, FMinerC> Miner;
+	TMap<FEntityId, FHarvestC> Harvest;
+	TMap<FEntityId, FCrawlC> Crawl;
 	TMap<FEntityId, FRepairC> Repair;
 	TMap<FEntityId, FVisionC> Vision;
 	TMap<FEntityId, FProjC> Proj;
@@ -139,8 +156,8 @@ struct FSimWorld
 		Alive.Remove(Id);
 		Pos.Remove(Id); Own.Remove(Id); Unit.Remove(Id); Struct.Remove(Id);
 		Health.Remove(Id); Mover.Remove(Id); Combat.Remove(Id); Prod.Remove(Id);
-		Miner.Remove(Id); Repair.Remove(Id); Vision.Remove(Id); Proj.Remove(Id);
-		BuildTask.Remove(Id); Manual.Remove(Id);
+		Harvest.Remove(Id); Crawl.Remove(Id); Repair.Remove(Id); Vision.Remove(Id);
+		Proj.Remove(Id); BuildTask.Remove(Id); Manual.Remove(Id);
 	}
 
 	bool IsAlive(FEntityId Id) const { return Alive.Contains(Id); }
@@ -154,6 +171,7 @@ struct FSimWorld
 enum class ECmdType : uint8
 {
 	Move, Attack, AttackMove, Stop, Produce, Build,
+	Harvest,         // TargetEid = geyser (node) id; Units = harvesters
 	ManualControl,   // bFlag = take/release direct control of Units[0]
 	ManualInput      // Target = (fwd,strafe) axes, FacingRad, bFlag = fire held
 };
@@ -177,8 +195,7 @@ struct FSimCommand
 struct FSimPlayer
 {
 	FName FactionId;
-	float Wood = 200.f;
-	float Iron = 100.f;
+	float KiTrin = 150.f;
 	FEntityId HqEid = INVALID_ENTITY;
 	bool bDefeated = false;
 	bool bIsAI = false;
@@ -231,15 +248,10 @@ struct FSimGame
 	// -- queries ------------------------------------------------------------
 	const FFactionDef& FactionOf(int32 Player) const { return *Content.Faction(Players[Player].FactionId); }
 	bool IsVisibleTo(int32 Player, const FVector2f& P) const;
-	bool CanAfford(int32 Player, int32 Wood, int32 Iron) const
-	{
-		return Players[Player].Wood >= Wood && Players[Player].Iron >= Iron;
-	}
-	void PayCost(int32 Player, int32 Wood, int32 Iron)
-	{
-		Players[Player].Wood -= Wood;
-		Players[Player].Iron -= Iron;
-	}
+	bool CanAfford(int32 Player, int32 Cost) const { return Players[Player].KiTrin >= Cost; }
+	void PayCost(int32 Player, int32 Cost) { Players[Player].KiTrin -= Cost; }
+	// Nearest own depot (HQ or colony) position for gas delivery.
+	bool FindDepot(int32 Player, const FVector2f& From, FVector2f& OutPos) const;
 	// Structure placement validation, shared by UI ghost and AI.
 	bool IsValidBuildSite(int32 Player, FName TplId, const FVector2f& At, FString* WhyNot = nullptr) const;
 

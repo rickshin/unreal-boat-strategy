@@ -387,10 +387,37 @@ void ARTSPlayerController::IssuePointCommand(const FVector2D& WorldXY, bool bAtt
 	}
 	if (Movers.Num() == 0) { return; }
 
+	const FVector2f SimTarget = WorldToSim2D(FVector(WorldXY.X, WorldXY.Y, 0));
+
+	// Right-click on a geyser: selected harvesters start the gas cycle.
+	if (!bAttackMove)
+	{
+		const int32 Node = G.Map.NodeNear(SimTarget, 2.f);
+		if (Node >= 0)
+		{
+			TArray<FEntityId> Harvesters;
+			for (const FEntityId E : Movers)
+			{
+				if (G.World.Harvest.Contains(E)) { Harvesters.Add(E); }
+			}
+			if (Harvesters.Num() > 0)
+			{
+				FSimCommand HCmd;
+				HCmd.Type = ECmdType::Harvest;
+				HCmd.Player = Me;
+				HCmd.Units = Harvesters;
+				HCmd.TargetEid = Node;
+				Mode->QueueCommand(HCmd);
+				Movers.RemoveAll([&](FEntityId E) { return Harvesters.Contains(E); });
+				if (Movers.Num() == 0) { return; }
+			}
+		}
+	}
+
 	FSimCommand Cmd;
 	Cmd.Player = Me;
 	Cmd.Units = Movers;
-	Cmd.Target = WorldToSim2D(FVector(WorldXY.X, WorldXY.Y, 0));
+	Cmd.Target = SimTarget;
 
 	const FEntityId Enemy = PickEntityAt(WorldXY, true);
 	if (!bAttackMove && Enemy != INVALID_ENTITY)

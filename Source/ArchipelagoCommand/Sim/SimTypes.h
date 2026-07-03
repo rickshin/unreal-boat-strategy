@@ -11,16 +11,18 @@ inline constexpr int32 FOG_INTERVAL_TICKS = 5;
 using FEntityId = int32;
 inline constexpr FEntityId INVALID_ENTITY = -1;
 
-enum class EUnitDomain : uint8 { Naval, Air };
+enum class EUnitDomain : uint8 { Naval, Air, Ground };   // Ground: geyser crawlers
 
 enum class EWeaponType : uint8 { Shell, Missile, Torpedo, AA, Disrupt };
 
-// Naval = surface targets (ships + floating structures). Air = aircraft only.
+// Naval = surface targets (ships, structures, crawlers). Air = aircraft only.
 enum class ETargetFilter : uint8 { Any, Naval, Air };
 
-enum class EStructureKind : uint8 { HQ, MinerWood, MinerIron, Outpost, Colony, Defense };
+enum class EStructureKind : uint8 { HQ, Extractor, Outpost, Colony, Defense };
 
-enum class EResourceType : uint8 { Wood, Iron };
+// One resource: KiTrin, an orange gas vented by island geysers. It can be
+// shaped into nearly anything, so the whole economy runs on it.
+enum class EResourceType : uint8 { KiTrin };
 
 enum class ESimDifficulty : uint8 { Easy, Normal, Hard };
 

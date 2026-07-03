@@ -33,9 +33,9 @@ namespace
 		M->Order = Order;
 		M->OrderDest = Dest;
 		M->ChaseTarget = INVALID_ENTITY;
-		if (U->Domain == EUnitDomain::Air)
+		if (U->Domain != EUnitDomain::Naval)
 		{
-			M->Waypoints = { Dest };   // aircraft fly straight, ignoring terrain
+			M->Waypoints = { Dest };   // air/ground move straight, ignoring the water grid
 		}
 		else
 		{
@@ -116,6 +116,7 @@ void SimSys::RunCommands(FSimGame& G)
 				const FVector2f Dest = G.Map.NearestWater(Cmd.Target + FSimPathfinder::GroupOffset(Index++));
 				SetMoveOrder(G, Eid, Dest,
 					Cmd.Type == ECmdType::AttackMove ? EMoveOrder::AttackMove : EMoveOrder::Move);
+				if (FHarvestC* HC = G.World.Harvest.Find(Eid)) { HC->State = EHarvestState::None; }
 			}
 			break;
 		}
@@ -150,6 +151,29 @@ void SimSys::RunCommands(FSimGame& G)
 					M->ChaseTarget = INVALID_ENTITY;
 				}
 				if (FCombatC* C = G.World.Combat.Find(Eid)) { C->Target = INVALID_ENTITY; }
+				if (FHarvestC* HC = G.World.Harvest.Find(Eid)) { HC->State = EHarvestState::None; }
+			}
+			break;
+		}
+		case ECmdType::Harvest:
+		{
+			if (Cmd.TargetEid < 0 || Cmd.TargetEid >= G.Map.Nodes.Num()) { break; }
+			const FSimResourceNode& Node = G.Map.Nodes[Cmd.TargetEid];
+			const FVector2f NodeP(Node.Cell.X + 0.5f, Node.Cell.Y + 0.5f);
+			for (const FEntityId Eid : Cmd.Units)
+			{
+				const FOwnerC* O = G.World.Own.Find(Eid);
+				FHarvestC* HC = G.World.Harvest.Find(Eid);
+				if (!O || O->Player != Cmd.Player || !HC) { continue; }
+				HC->State = EHarvestState::ToGeyser;
+				HC->NodeId = Cmd.TargetEid;
+				HC->DockTicksLeft = 0;
+				if (FMoverC* M = G.World.Mover.Find(Eid))
+				{
+					M->Order = EMoveOrder::Move;
+					M->Waypoints = { NodeP };
+					M->ChaseTarget = INVALID_ENTITY;
+				}
 			}
 			break;
 		}
@@ -160,7 +184,7 @@ void SimSys::RunCommands(FSimGame& G)
 			if (!Prod || !O || O->Player != Cmd.Player) { break; }
 			if (!Prod->Options.Contains(Cmd.TplId) || Prod->Queue.Num() >= 7) { break; }
 			const FUnitTpl* T = G.Content.Unit(G.Players[Cmd.Player].FactionId, Cmd.TplId);
-			if (!T || !G.CanAfford(Cmd.Player, T->CostWood, T->CostIron))
+			if (!T || !G.CanAfford(Cmd.Player, T->Cost))
 			{
 				if (!G.Players[Cmd.Player].bIsAI)
 				{
@@ -169,7 +193,7 @@ void SimSys::RunCommands(FSimGame& G)
 				}
 				break;
 			}
-			G.PayCost(Cmd.Player, T->CostWood, T->CostIron);
+			G.PayCost(Cmd.Player, T->Cost);
 			Prod->Queue.Add(Cmd.TplId);
 			break;
 		}
@@ -218,7 +242,7 @@ void SimSys::RunCommands(FSimGame& G)
 			if (!O || O->Player != Cmd.Player || !U || !U->bBuilder) { break; }
 			if (!G.IsValidBuildSite(Cmd.Player, Cmd.TplId, Cmd.Target)) { break; }
 			const FStructTpl* T = G.Content.Structure(G.Players[Cmd.Player].FactionId, Cmd.TplId);
-			if (!T || !G.CanAfford(Cmd.Player, T->CostWood, T->CostIron))
+			if (!T || !G.CanAfford(Cmd.Player, T->Cost))
 			{
 				if (!G.Players[Cmd.Player].bIsAI)
 				{
@@ -227,9 +251,10 @@ void SimSys::RunCommands(FSimGame& G)
 				}
 				break;
 			}
-			G.PayCost(Cmd.Player, T->CostWood, T->CostIron);
+			G.PayCost(Cmd.Player, T->Cost);
 			const FEntityId Site = G.SpawnStructure(Cmd.Player, Cmd.TplId, Cmd.Target, false);
 			G.World.BuildTask.Add(Builder, { Site });
+			if (FHarvestC* HC = G.World.Harvest.Find(Builder)) { HC->State = EHarvestState::None; }
 			SetMoveOrder(G, Builder, G.Map.NearestWater(Cmd.Target + FVector2f(1.8f, 0.f)), EMoveOrder::Move);
 			break;
 		}
@@ -274,26 +299,179 @@ void SimSys::RunEconomy(FSimGame& G)
 		}
 	}
 
-	// Mining income (AI difficulty scales AI income only).
-	for (const FEntityId Eid : SimSortedKeys(G.World.Miner))
+	// Gas extractors assemble themselves once their crawler unfolds.
+	for (const FEntityId Eid : SimSortedKeys(G.World.Struct))
 	{
-		const FStructC* S = G.World.Struct.Find(Eid);
-		if (!S || !S->bComplete) { continue; }
-		FMinerC& M = G.World.Miner[Eid];
-		if (M.NodeId < 0 || M.NodeId >= G.Map.Nodes.Num()) { continue; }
-		FSimResourceNode& Node = G.Map.Nodes[M.NodeId];
-		if (Node.Amount <= 0.f) { continue; }
+		FStructC& S = G.World.Struct[Eid];
+		if (S.Kind != EStructureKind::Extractor || S.bComplete) { continue; }
+		const FOwnerC& O = G.World.Own[Eid];
+		const FStructTpl* T = G.Content.Structure(G.Players[O.Player].FactionId, S.Tpl);
+		if (!T) { continue; }
+		S.Progress += SIM_DT / T->BuildTime;
+		FHealthC& H = G.World.Health[Eid];
+		H.Hp = FMath::Min(T->MaxHp, T->MaxHp * (0.1f + 0.9f * S.Progress));
+		if (S.Progress >= 1.f) { CompleteStructure(G, Eid); }
+	}
+
+	// Crawlers: crawl onto their geyser and become the extractor.
+	for (const FEntityId Eid : SimSortedKeys(G.World.Crawl))
+	{
+		if (!G.World.IsAlive(Eid)) { continue; }
+		const FCrawlC& CC = G.World.Crawl[Eid];
+		if (CC.NodeId < 0 || CC.NodeId >= G.Map.Nodes.Num()) { continue; }
+		FSimResourceNode& Node = G.Map.Nodes[CC.NodeId];
+		const FVector2f NodeP(Node.Cell.X + 0.5f, Node.Cell.Y + 0.5f);
+		const FPosC* P = G.World.Pos.Find(Eid);
+		if (!P || (P->P - NodeP).Size() > 0.35f) { continue; }
 		const int32 Player = G.World.Own[Eid].Player;
-		float Mult = 1.f;
-		if (G.Players[Player].bIsAI)
+		if (Node.ClaimedBy == INVALID_ENTITY)
 		{
-			Mult = (G.Difficulty == ESimDifficulty::Easy) ? 0.6f
-				: (G.Difficulty == ESimDifficulty::Hard) ? 1.4f : 1.f;
+			FName ExtractorId;
+			for (const auto& Pair : G.FactionOf(Player).Structures)
+			{
+				if (Pair.Value.Kind == EStructureKind::Extractor) { ExtractorId = Pair.Key; break; }
+			}
+			if (!ExtractorId.IsNone())
+			{
+				G.SpawnStructure(Player, ExtractorId, NodeP, false);
+			}
 		}
-		const float Take = FMath::Min(Node.Amount, M.Rate * SIM_DT * Mult);
-		Node.Amount -= Take;
-		if (Node.Type == EResourceType::Wood) { G.Players[Player].Wood += Take; }
-		else { G.Players[Player].Iron += Take; }
+		G.World.Destroy(Eid);   // the crawler is consumed by the deployment
+	}
+
+	// Flying gas harvesters: fly to the geyser, deploy a crawler if the
+	// geyser is untapped, dock on the extractor tube, then ferry the gas
+	// to the nearest depot. Repeats until the geyser is spent.
+	for (const FEntityId Eid : SimSortedKeys(G.World.Harvest))
+	{
+		FHarvestC& HC = G.World.Harvest[Eid];
+		if (HC.State == EHarvestState::None) { continue; }
+		FPosC* P = G.World.Pos.Find(Eid);
+		FMoverC* M = G.World.Mover.Find(Eid);
+		if (!P || !M) { continue; }
+		if (HC.NodeId < 0 || HC.NodeId >= G.Map.Nodes.Num()) { HC.State = EHarvestState::None; continue; }
+		const int32 Player = G.World.Own[Eid].Player;
+		FSimResourceNode& Node = G.Map.Nodes[HC.NodeId];
+		const FVector2f NodeP(Node.Cell.X + 0.5f, Node.Cell.Y + 0.5f);
+		const FUnitTpl* T = G.Content.Unit(G.Players[Player].FactionId, G.World.Unit[Eid].Tpl);
+		if (!T) { HC.State = EHarvestState::None; continue; }
+
+		switch (HC.State)
+		{
+		case EHarvestState::ToGeyser:
+		{
+			if (Node.Amount <= 0.f) { HC.State = EHarvestState::None; break; }
+			if ((P->P - NodeP).Size() > 1.2f)
+			{
+				if (M->Waypoints.Num() == 0) { M->Waypoints = { NodeP }; M->Order = EMoveOrder::Move; }
+				break;
+			}
+			if (Node.ClaimedBy != INVALID_ENTITY && G.World.IsAlive(Node.ClaimedBy))
+			{
+				FStructC& Ext = G.World.Struct[Node.ClaimedBy];
+				if (!Ext.bComplete) { HC.State = EHarvestState::WaitBuild; break; }
+				if (Ext.DockedHarvester == INVALID_ENTITY || !G.World.IsAlive(Ext.DockedHarvester))
+				{
+					// Attach to the tube.
+					Ext.DockedHarvester = Eid;
+					HC.State = EHarvestState::Docked;
+					HC.DockTicksLeft = FMath::Max(1, FMath::RoundToInt32(T->DockTime * SIM_TICKS_PER_SEC));
+					M->Waypoints.Reset();
+					M->Order = EMoveOrder::Idle;
+					P->P = NodeP;
+				}
+				// else: tube busy, hover and wait our turn.
+			}
+			else
+			{
+				// Untapped geyser: drop the crawler.
+				if (!T->CrawlerId.IsNone() && !G.World.IsAlive(HC.Crawler))
+				{
+					const FEntityId Crawler = G.SpawnUnit(Player, T->CrawlerId, NodeP + FVector2f(0.9f, 0.6f));
+					if (Crawler != INVALID_ENTITY)
+					{
+						G.World.Crawl.Add(Crawler, { HC.NodeId });
+						if (FMoverC* CM = G.World.Mover.Find(Crawler))
+						{
+							CM->Order = EMoveOrder::Move;
+							CM->Waypoints = { NodeP };
+						}
+						HC.Crawler = Crawler;
+					}
+				}
+				HC.State = EHarvestState::WaitBuild;
+			}
+			break;
+		}
+		case EHarvestState::WaitBuild:
+		{
+			if (Node.Amount <= 0.f) { HC.State = EHarvestState::None; break; }
+			if (Node.ClaimedBy != INVALID_ENTITY && G.World.IsAlive(Node.ClaimedBy)
+				&& G.World.Struct[Node.ClaimedBy].bComplete)
+			{
+				HC.State = EHarvestState::ToGeyser;   // dock on the next pass
+			}
+			else if (Node.ClaimedBy == INVALID_ENTITY && !G.World.IsAlive(HC.Crawler))
+			{
+				HC.State = EHarvestState::ToGeyser;   // crawler lost: redeploy
+			}
+			break;
+		}
+		case EHarvestState::Docked:
+		{
+			if (Node.ClaimedBy == INVALID_ENTITY || !G.World.IsAlive(Node.ClaimedBy))
+			{
+				HC.State = EHarvestState::ToGeyser;   // extractor destroyed under us
+				break;
+			}
+			P->P = NodeP;   // pinned to the tube while filling
+			if (--HC.DockTicksLeft <= 0)
+			{
+				FStructC& Ext = G.World.Struct[Node.ClaimedBy];
+				if (Ext.DockedHarvester == Eid) { Ext.DockedHarvester = INVALID_ENTITY; }
+				HC.GasHeld = FMath::Min(Node.Amount, T->GasCapacity);
+				Node.Amount -= HC.GasHeld;
+				FVector2f Depot;
+				if (HC.GasHeld > 0.f && G.FindDepot(Player, P->P, Depot))
+				{
+					HC.State = EHarvestState::Deliver;
+					M->Waypoints = { Depot };
+					M->Order = EMoveOrder::Move;
+				}
+				else { HC.State = EHarvestState::None; }
+			}
+			break;
+		}
+		case EHarvestState::Deliver:
+		{
+			FVector2f Depot;
+			if (!G.FindDepot(Player, P->P, Depot)) { HC.State = EHarvestState::None; break; }
+			if ((P->P - Depot).Size() > 2.2f)
+			{
+				if (M->Waypoints.Num() == 0) { M->Waypoints = { Depot }; M->Order = EMoveOrder::Move; }
+				break;
+			}
+			float Mult = 1.f;
+			if (G.Players[Player].bIsAI)
+			{
+				Mult = (G.Difficulty == ESimDifficulty::Easy) ? 0.6f
+					: (G.Difficulty == ESimDifficulty::Hard) ? 1.4f : 1.f;
+			}
+			G.Players[Player].KiTrin += HC.GasHeld * Mult;
+			UE_LOG(LogTemp, Log, TEXT("Harvester %d delivered %.0f KiTrin (player %d now %.0f)"),
+				Eid, HC.GasHeld * Mult, Player, G.Players[Player].KiTrin);
+			HC.GasHeld = 0.f;
+			if (Node.Amount > 0.f)
+			{
+				HC.State = EHarvestState::ToGeyser;
+				M->Waypoints = { NodeP };
+				M->Order = EMoveOrder::Move;
+			}
+			else { HC.State = EHarvestState::None; }
+			break;
+		}
+		default: break;
+		}
 	}
 
 	// Production queues (HQ, colonies, carriers).
@@ -353,7 +531,9 @@ void SimSys::RunMovement(FSimGame& G)
 		FMoverC& M = G.World.Mover[Eid];
 		FPosC& P = G.World.Pos[Eid];
 		const FUnitC& U = G.World.Unit[Eid];
-		const bool bAir = U.Domain == EUnitDomain::Air;
+		// Air flies over terrain; Ground (crawlers) walks on it. Only naval
+		// hulls are constrained to water.
+		const bool bAir = U.Domain != EUnitDomain::Naval;
 
 		// Direct player control, boat-style: W/S is the throttle along the
 		// hull's heading (reverse at 40%), A/D is the rudder. Rudder
@@ -478,13 +658,13 @@ void SimSys::RunMovement(FSimGame& G)
 	const int32 GridW = G.Map.Width;
 	for (const FEntityId Eid : SimSortedKeys(G.World.Mover))
 	{
-		if (G.World.Unit[Eid].Domain == EUnitDomain::Air) { continue; }
+		if (G.World.Unit[Eid].Domain != EUnitDomain::Naval) { continue; }
 		const FVector2f& P = G.World.Pos[Eid].P;
 		Buckets.FindOrAdd(FMath::FloorToInt32(P.Y) * GridW + FMath::FloorToInt32(P.X)).Add(Eid);
 	}
 	for (const FEntityId Eid : SimSortedKeys(G.World.Mover))
 	{
-		if (G.World.Unit[Eid].Domain == EUnitDomain::Air) { continue; }
+		if (G.World.Unit[Eid].Domain != EUnitDomain::Naval) { continue; }
 		FPosC& P = G.World.Pos[Eid];
 		FVector2f Push = FVector2f::ZeroVector;
 		const int32 CX = FMath::FloorToInt32(P.P.X);

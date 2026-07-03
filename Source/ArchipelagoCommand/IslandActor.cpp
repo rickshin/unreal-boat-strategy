@@ -3,6 +3,9 @@
 #include "Sim/SimMap.h"
 #include "ProceduralMeshComponent.h"
 #include "WaterTerrainComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -191,64 +194,73 @@ void ANodeDecorActor::Build(const FSimResourceNode& Node)
 {
 	NodeId = Node.Id;
 	FRandomStream Rng(Node.Id * 331 + 17);
+	// Geysers sit on coastal land; the terrain there is low, so a fixed
+	// base height with a rocky skirt reads as grounded.
 	const FVector Base(
-		(Node.Cell.X + 0.5f) * AC_CELL, (Node.Cell.Y + 0.5f) * AC_CELL, AC_SEA_LEVEL);
+		(Node.Cell.X + 0.5f) * AC_CELL, (Node.Cell.Y + 0.5f) * AC_CELL, 60.f);
 	SetActorLocation(Base);
 
-	if (Node.Type == EResourceType::Wood)
-	{
-		// Kelp forest: a cluster of thin green cylinders poking out of the sea.
-		UStaticMesh* Cyl = LoadObject<UStaticMesh>(nullptr, AC_MESH_CYLINDER);
-		UMaterialInstanceDynamic* MID = MakeMID(this, FLinearColor(0.10f, 0.34f, 0.10f));
-		for (int32 i = 0; i < 7; ++i)
-		{
-			UStaticMeshComponent* K = NewObject<UStaticMeshComponent>(this);
-			K->SetStaticMesh(Cyl);
-			K->SetMaterial(0, MID);
-			K->SetWorldScale3D(FVector(0.14f, 0.14f, Rng.FRandRange(0.8f, 1.6f)));
-			K->SetRelativeLocation(FVector(Rng.FRandRange(-220.f, 220.f), Rng.FRandRange(-220.f, 220.f), -40.f));
-			K->SetRelativeRotation(FRotator(Rng.FRandRange(-14.f, 14.f), Rng.FRandRange(0.f, 360.f), 0.f));
-			K->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			K->SetCastShadow(false);
-			K->SetupAttachment(Root);
-			K->RegisterComponent();
-		}
-	}
-	else
-	{
-		// Shipwreck / ore field: tilted rusty hulk plus dark ore lumps.
-		UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, AC_MESH_CUBE);
-		UMaterialInstanceDynamic* Rust = MakeMID(this, FLinearColor(0.33f, 0.17f, 0.08f));
-		UStaticMeshComponent* Hulk = NewObject<UStaticMeshComponent>(this);
-		Hulk->SetStaticMesh(Cube);
-		Hulk->SetMaterial(0, Rust);
-		Hulk->SetWorldScale3D(FVector(3.2f, 1.0f, 0.7f));
-		Hulk->SetRelativeLocation(FVector(0.f, 0.f, -30.f));
-		Hulk->SetRelativeRotation(FRotator(6.f, Rng.FRandRange(0.f, 360.f), 14.f));
-		Hulk->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		Hulk->SetupAttachment(Root);
-		Hulk->RegisterComponent();
+	UStaticMesh* Cone = LoadObject<UStaticMesh>(nullptr, AC_MESH_CONE);
+	UStaticMesh* Cyl = LoadObject<UStaticMesh>(nullptr, AC_MESH_CYLINDER);
+	UStaticMesh* Sphere = LoadObject<UStaticMesh>(nullptr, AC_MESH_SPHERE);
 
-		UMaterialInstanceDynamic* Ore = MakeMID(this, FLinearColor(0.12f, 0.12f, 0.15f));
-		for (int32 i = 0; i < 4; ++i)
-		{
-			UStaticMeshComponent* Lump = NewObject<UStaticMeshComponent>(this);
-			Lump->SetStaticMesh(Cube);
-			Lump->SetMaterial(0, Ore);
-			const float S = Rng.FRandRange(0.4f, 0.8f);
-			Lump->SetWorldScale3D(FVector(S));
-			Lump->SetRelativeLocation(FVector(Rng.FRandRange(-260.f, 260.f), Rng.FRandRange(-260.f, 260.f), -55.f));
-			Lump->SetRelativeRotation(FRotator(0.f, Rng.FRandRange(0.f, 360.f), Rng.FRandRange(0.f, 30.f)));
-			Lump->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			Lump->SetCastShadow(false);
-			Lump->SetupAttachment(Root);
-			Lump->RegisterComponent();
-		}
+	// Rocky vent cone.
+	UMaterialInstanceDynamic* Rock = MakeMID(this, FLinearColor(0.22f, 0.19f, 0.17f));
+	UStaticMeshComponent* Vent = NewObject<UStaticMeshComponent>(this);
+	Vent->SetStaticMesh(Cone);
+	Vent->SetMaterial(0, Rock);
+	Vent->SetWorldScale3D(FVector(2.6f, 2.6f, 1.6f));
+	Vent->SetRelativeLocation(FVector(0, 0, 40.f));
+	Vent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Vent->SetupAttachment(Root);
+	Vent->RegisterComponent();
+	for (int32 i = 0; i < 4; ++i)
+	{
+		UStaticMeshComponent* Boulder = NewObject<UStaticMeshComponent>(this);
+		Boulder->SetStaticMesh(Cone);
+		Boulder->SetMaterial(0, Rock);
+		const float S = Rng.FRandRange(0.5f, 1.0f);
+		Boulder->SetWorldScale3D(FVector(S, S, S * 0.8f));
+		Boulder->SetRelativeLocation(FVector(Rng.FRandRange(-200.f, 200.f), Rng.FRandRange(-200.f, 200.f), -20.f));
+		Boulder->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Boulder->SetCastShadow(false);
+		Boulder->SetupAttachment(Root);
+		Boulder->RegisterComponent();
+	}
+
+	// The shining KiTrin core: over-bright orange so it glows under bloom.
+	UMaterialInstanceDynamic* Glow = MakeMID(this, FLinearColor(3.2f, 1.15f, 0.10f));
+	UStaticMeshComponent* Core = NewObject<UStaticMeshComponent>(this);
+	Core->SetStaticMesh(Sphere);
+	Core->SetMaterial(0, Glow);
+	Core->SetWorldScale3D(FVector(0.9f, 0.9f, 0.65f));
+	Core->SetRelativeLocation(FVector(0, 0, 140.f));
+	Core->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Core->SetCastShadow(false);
+	Core->SetupAttachment(Root);
+	Core->RegisterComponent();
+	UStaticMeshComponent* Column = NewObject<UStaticMeshComponent>(this);
+	Column->SetStaticMesh(Cyl);
+	Column->SetMaterial(0, Glow);
+	Column->SetWorldScale3D(FVector(0.22f, 0.22f, 2.4f));
+	Column->SetRelativeLocation(FVector(0, 0, 240.f));
+	Column->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Column->SetCastShadow(false);
+	Column->SetupAttachment(Root);
+	Column->RegisterComponent();
+
+	// Star motes venting upward (engine Niagara fountain template).
+	if (UNiagaraSystem* Fountain = LoadObject<UNiagaraSystem>(nullptr,
+		TEXT("/Niagara/DefaultAssets/Templates/Systems/FountainLightweight.FountainLightweight")))
+	{
+		Stars = UNiagaraFunctionLibrary::SpawnSystemAttached(Fountain, Root, NAME_None,
+			FVector(0, 0, 320.f), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, false);
 	}
 }
 
 void ANodeDecorActor::SetDepleted(bool bDepleted)
 {
-	// Depleted fields sink out of sight; the sim node stays for the record.
+	// A spent geyser goes dark; the sim node stays for the record.
 	SetActorHiddenInGame(bDepleted);
+	if (Stars) { Stars->SetActive(!bDepleted); }
 }

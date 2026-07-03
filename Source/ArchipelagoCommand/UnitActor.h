@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Sim/SimTypes.h"
+#include "ACTypes.h"
 #include "UnitActor.generated.h"
 
 class UProceduralMeshComponent;
@@ -34,13 +35,17 @@ public:
 	int32 OwnerPlayer = -1;
 	bool bIsStructure = false;
 	bool bIsAir = false;
+	bool bIsGround = false;               // geyser crawlers sit on the terrain
 	float HpFraction = 1.f;
+	float AirTargetZ = AC_AIR_ALTITUDE;   // harvesters descend to dock
 	FName TplId;
 	FString DisplayName;
 
 private:
 	void BuildBoat(float Length, float Beam, float Height, const FLinearColor& Color, int32 Tier);
 	void BuildAircraft(float Size, const FLinearColor& Color);
+	void BuildHarvester(const FLinearColor& Color);
+	void BuildCrawler(const FLinearColor& Color);
 	void BuildStructure(EStructureKind Kind, const FLinearColor& Color, float Footprint);
 	UStaticMeshComponent* AddBox(const FVector& Offset, const FVector& Scale, const FLinearColor& Color);
 	UStaticMeshComponent* AddShape(const TCHAR* MeshPath, const FVector& Offset, const FVector& Scale, const FLinearColor& Color);
@@ -57,6 +62,7 @@ private:
 	AACGameMode* GM = nullptr;   // cached for water-surface queries
 	FVector2f PrevPos = FVector2f::ZeroVector;
 	FVector2f CurrPos = FVector2f::ZeroVector;
+	float CurAirZ = AC_AIR_ALTITUDE;
 	float PrevFacing = 0.f;
 	float CurrFacing = 0.f;
 	float BuildProgress = 1.f;
