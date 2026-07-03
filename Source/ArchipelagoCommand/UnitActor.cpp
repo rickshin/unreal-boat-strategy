@@ -33,7 +33,9 @@ namespace
 			V.Append({ A, B, C });
 			N.Append({ Normal, Normal, Normal });
 			UV.Append({ FVector2D(0, 0), FVector2D(1, 0), FVector2D(0, 1) });
-			T.Append({ I, I + 1, I + 2 });
+			// UE renders the clockwise-wound side; reverse the index order so
+			// the visible face matches the computed outward normal.
+			T.Append({ I, I + 2, I + 1 });
 		}
 		void Quad(const FVector& A, const FVector& B, const FVector& C, const FVector& D)
 		{
@@ -211,10 +213,12 @@ void AUnitActor::InitFor(const FSimGame& G, FEntityId InEid)
 	}
 
 	// Selection ring: flat disc at the waterline, toggled by the controller.
+	// Absolute rotation keeps it level while the hull pitches on the swell.
 	SelectionRing = AddShape(AC_MESH_CYLINDER,
 		FVector(0, 0, bIsAir ? -30.f : 12.f),
 		FVector(RingRadius / 50.f, RingRadius / 50.f, 0.05f),
 		FLinearColor(0.1f, 1.f, 0.2f));
+	SelectionRing->SetUsingAbsoluteRotation(true);
 	SelectionRing->SetVisibility(false);
 
 	const FPosC& P = G.World.Pos[Eid];
@@ -238,9 +242,8 @@ void AUnitActor::UpdateVisual(float Alpha, float WorldTime)
 	const FVector2D XY = SimToWorld2D(SimP);
 
 	float Z = AC_SEA_LEVEL;
-	FRotator Rot(0.f, 0.f, 0.f);
-	float FacingLerp = PrevFacing + FMath::FindDeltaAngleRadians(PrevFacing, CurrFacing) * Alpha;
-	Rot.Yaw = FMath::RadiansToDegrees(FacingLerp);
+	const float FacingLerp = PrevFacing + FMath::FindDeltaAngleRadians(PrevFacing, CurrFacing) * Alpha;
+	FRotator Rot(0.f, FMath::RadiansToDegrees(FacingLerp), 0.f);
 
 	if (bIsAir)
 	{
@@ -248,12 +251,13 @@ void AUnitActor::UpdateVisual(float Alpha, float WorldTime)
 	}
 	else if (BobDamp > 0.f)
 	{
-		// Ride the exact swell the ocean mesh renders.
-		Z = AOceanActor::WaveHeight(XY, WorldTime) * BobDamp;
-		const FVector2D Grad = AOceanActor::WaveGradient(XY, WorldTime) * BobDamp;
-		const float CosY = FMath::Cos(FacingLerp), SinY = FMath::Sin(FacingLerp);
-		Rot.Pitch = FMath::RadiansToDegrees(-(Grad.X * CosY + Grad.Y * SinY)) * 28.f;
-		Rot.Roll = FMath::RadiansToDegrees(Grad.X * SinY - Grad.Y * CosY) * 28.f;
+		// Ride a damped version of the swell the ocean mesh renders: lift
+		// with the wave and lean gently along the water's surface normal.
+		Z = AOceanActor::WaveHeight(XY, WorldTime) * BobDamp * 0.5f;
+		const FVector2D Grad = AOceanActor::WaveGradient(XY, WorldTime) * (BobDamp * 0.45f);
+		const FVector SurfaceN = FVector(-Grad.X, -Grad.Y, 1.f).GetSafeNormal();
+		const FVector Fwd(FMath::Cos(FacingLerp), FMath::Sin(FacingLerp), 0.f);
+		Rot = FRotationMatrix::MakeFromZX(SurfaceN, Fwd).Rotator();
 	}
 
 	// Structures rise out of the water while under construction.
