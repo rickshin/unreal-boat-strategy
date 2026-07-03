@@ -46,7 +46,8 @@ void ARTSPlayerController::SetupInputComponent()
 	InputComponent->BindAction(TEXT("ToggleUnitView"), IE_Pressed, this, &ARTSPlayerController::OnToggleUnitView);
 	InputComponent->BindAction(TEXT("AttackMove"), IE_Pressed, this, &ARTSPlayerController::OnAttackMoveKey);
 	InputComponent->BindAction(TEXT("Stop"), IE_Pressed, this, &ARTSPlayerController::OnStopKey);
-	InputComponent->BindAction(TEXT("JumpToHQ"), IE_Pressed, this, &ARTSPlayerController::OnJumpToHQ);
+	InputComponent->BindAction(TEXT("JumpToHQ"), IE_Pressed, this, &ARTSPlayerController::OnSpacePressed);
+	InputComponent->BindAction(TEXT("JumpToHQ"), IE_Released, this, &ARTSPlayerController::OnSpaceReleased);
 	InputComponent->BindAction(TEXT("CancelEsc"), IE_Pressed, this, &ARTSPlayerController::OnCancelEsc);
 	InputComponent->BindAction(TEXT("Restart"), IE_Pressed, this, &ARTSPlayerController::OnRestart);
 	for (int32 i = 1; i <= 9; ++i)
@@ -87,13 +88,53 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 
 	// If the followed unit died while looking, restore the cursor.
 	if (bLookActive && !IsInUnitView()) { OnCommandReleased(); }
+	if (bFireHeld && !IsInUnitView()) { bFireHeld = false; }
 
-	// Unit view: RMB-held mouse deltas orbit the chase camera.
+	// Direct-control handover: whenever the followed unit changes, tell the
+	// sim to take/release manual control (auto-fire off while controlled).
+	AACGameMode* Mode = GM();
+	const FEntityId Followed = CamPawn() ? CamPawn()->FollowedEntity() : INVALID_ENTITY;
+	if (Mode && Followed != PrevFollowed)
+	{
+		if (PrevFollowed != INVALID_ENTITY)
+		{
+			FSimCommand Cmd;
+			Cmd.Type = ECmdType::ManualControl;
+			Cmd.Player = Mode->LocalPlayer();
+			Cmd.Units = { PrevFollowed };
+			Cmd.bFlag = false;
+			Mode->QueueCommand(Cmd);
+		}
+		if (Followed != INVALID_ENTITY)
+		{
+			FSimCommand Cmd;
+			Cmd.Type = ECmdType::ManualControl;
+			Cmd.Player = Mode->LocalPlayer();
+			Cmd.Units = { Followed };
+			Cmd.bFlag = true;
+			Mode->QueueCommand(Cmd);
+		}
+		PrevFollowed = Followed;
+	}
+
+	// Unit view: RMB-held mouse deltas steer the view; WASD and Space are
+	// streamed to the sim as this unit's drive/fire input.
 	if (IsInUnitView())
 	{
 		if (bLookActive && !LookAxis.IsNearlyZero())
 		{
 			CamPawn()->AddLookInput(LookAxis.X * 1.6f, LookAxis.Y * 1.6f);
+		}
+		if (Mode && Followed != INVALID_ENTITY)
+		{
+			FSimCommand Cmd;
+			Cmd.Type = ECmdType::ManualInput;
+			Cmd.Player = Mode->LocalPlayer();
+			Cmd.Units = { Followed };
+			Cmd.Target = FVector2f(float(CameraAxis.X), float(CameraAxis.Y));  // fwd, strafe
+			Cmd.FacingRad = FMath::DegreesToRadians(CamPawn()->GetViewYawDegrees());
+			Cmd.bFlag = bFireHeld;
+			Mode->QueueCommand(Cmd);
 		}
 	}
 	else
@@ -407,8 +448,14 @@ void ARTSPlayerController::OnStopKey()
 	Mode->QueueCommand(Cmd);
 }
 
-void ARTSPlayerController::OnJumpToHQ()
+void ARTSPlayerController::OnSpacePressed()
 {
+	// Unit view: Space is the trigger.
+	if (IsInUnitView())
+	{
+		bFireHeld = true;
+		return;
+	}
 	AACGameMode* Mode = GM();
 	if (!Mode || !Mode->Sim() || !CamPawn()) { return; }
 	const FEntityId Hq = Mode->Sim()->Players[Mode->LocalPlayer()].HqEid;
@@ -416,6 +463,11 @@ void ARTSPlayerController::OnJumpToHQ()
 	{
 		CamPawn()->JumpTo(SimToWorld2D(P->P));
 	}
+}
+
+void ARTSPlayerController::OnSpaceReleased()
+{
+	bFireHeld = false;
 }
 
 void ARTSPlayerController::OnCancelEsc()

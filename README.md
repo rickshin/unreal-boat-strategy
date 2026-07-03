@@ -113,8 +113,11 @@ build the `ArchipelagoCommandEditor` target, open, press Play.
 | Right-click | Move; on an enemy: attack; on minimap: move there |
 | `Q` then click | Attack-move (engage everything on the way) |
 | `H` | Stop (halt) |
-| `V` | Unit view: over-the-shoulder camera on the selected unit; `V`/`Esc` returns overhead |
-| Hold right mouse (in unit view) | Look around; mouse wheel adjusts follow distance |
+| `V` | Direct control: over-the-shoulder view of the selected unit; `V`/`Esc` returns overhead |
+| `W`/`S` (in direct control) | Throttle ahead / astern (reverse is slower) |
+| `A`/`D` (in direct control) | Rudder: turn the hull (more authority with way on) |
+| `Space` (in direct control) | Fire weapons at the enemy nearest your crosshair (auto-fire is off) |
+| Hold right mouse (in direct control) | Aim / look around; wheel adjusts camera distance |
 | `1`–`9` (or panel buttons) | Production / build options of the selection |
 | WASD / arrow keys, screen edge, minimap click | Camera pan / jump |
 | Mouse wheel | Zoom |
@@ -223,12 +226,19 @@ original design document (§ numbers refer to it):
   maps (§16), HQ-kill victory (§17), fish + rock decorations exactly per
   the §18 rules, 20 Hz determinism + state hash (§4, §19). 
 - **Views (done):** select a unit and press `V` for an over-the-shoulder
-  chase camera that follows it — hold the right mouse button to look
-  around, mouse wheel adjusts distance, `V`/`Esc` returns to the
-  overhead view (automatic if the unit dies). Camera pan is now
-  WASD (plus arrows), which moved attack-move to `Q` and stop to `H`.
-  Debug flag `-FollowView` starts a session already following the first
-  unit, for automated screenshots.
+  view with **direct control**, boat-style: `W`/`S` is the throttle
+  (reverse at 40%), `A`/`D` is the rudder — turn authority grows with
+  speed like a real rudder — and the chase camera swings with the hull.
+  Hold right mouse to aim freely; `Space` fires at the enemy nearest
+  your crosshair within a 60-degree cone. The unit's automatic
+  targeting is suspended while controlled and restored when you press
+  `V`/`Esc` to return overhead (automatic if the unit dies).
+  Determinism is preserved: throttle/rudder/fire stream into the sim as
+  `ManualInput` commands like any other order, handled by a `Manual`
+  component that the Movement and Combat systems check first. Overhead
+  camera pan is WASD (plus arrows), which moved attack-move to `Q` and
+  stop to `H`. Debug flag `-FollowView` starts a session already in
+  direct control of the first unit.
 - **Visuals:** stylized low-poly props over **Epic's Water plugin ocean**
   (done): a `WaterZone` + `WaterBodyOcean` are spawned from C++ at runtime
   with the plugin's ocean material, Gerstner wave asset and underwater

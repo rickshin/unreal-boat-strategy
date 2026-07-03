@@ -173,6 +173,42 @@ void SimSys::RunCommands(FSimGame& G)
 			Prod->Queue.Add(Cmd.TplId);
 			break;
 		}
+		case ECmdType::ManualControl:
+		{
+			if (Cmd.Units.Num() == 0) { break; }
+			const FEntityId Eid = Cmd.Units[0];
+			const FOwnerC* O = G.World.Own.Find(Eid);
+			if (!O || O->Player != Cmd.Player || !G.World.Mover.Contains(Eid)) { break; }
+			if (Cmd.bFlag)
+			{
+				FManualC MC;
+				if (const FPosC* P = G.World.Pos.Find(Eid)) { MC.DesiredFacing = P->Facing; }
+				G.World.Manual.Add(Eid, MC);
+				// Direct control overrides standing orders.
+				FMoverC& M = G.World.Mover[Eid];
+				M.Order = EMoveOrder::Idle;
+				M.Waypoints.Reset();
+				M.ChaseTarget = INVALID_ENTITY;
+				if (FCombatC* C = G.World.Combat.Find(Eid)) { C->Target = INVALID_ENTITY; }
+			}
+			else
+			{
+				G.World.Manual.Remove(Eid);
+			}
+			break;
+		}
+		case ECmdType::ManualInput:
+		{
+			if (Cmd.Units.Num() == 0) { break; }
+			const FEntityId Eid = Cmd.Units[0];
+			const FOwnerC* O = G.World.Own.Find(Eid);
+			FManualC* MC = G.World.Manual.Find(Eid);
+			if (!O || O->Player != Cmd.Player || !MC) { break; }
+			MC->Axes = Cmd.Target;
+			MC->DesiredFacing = Cmd.FacingRad;
+			MC->bFireHeld = Cmd.bFlag;
+			break;
+		}
 		case ECmdType::Build:
 		{
 			if (Cmd.Units.Num() == 0) { break; }
@@ -318,6 +354,31 @@ void SimSys::RunMovement(FSimGame& G)
 		FPosC& P = G.World.Pos[Eid];
 		const FUnitC& U = G.World.Unit[Eid];
 		const bool bAir = U.Domain == EUnitDomain::Air;
+
+		// Direct player control, boat-style: W/S is the throttle along the
+		// hull's heading (reverse at 40%), A/D is the rudder. Rudder
+		// authority grows with way on the boat but never quite vanishes,
+		// so you can still come about at a standstill.
+		if (const FManualC* MC = G.World.Manual.Find(Eid))
+		{
+			const float Throttle = FMath::Clamp(MC->Axes.X, -1.f, 1.f);
+			const float Rudder = FMath::Clamp(MC->Axes.Y, -1.f, 1.f);
+
+			const float TurnRate = bAir ? 1.4f : 1.8f;   // rad/s at full throttle
+			const float Authority = 0.35f + 0.65f * FMath::Abs(Throttle);
+			P.Facing += Rudder * TurnRate * Authority * SIM_DT;
+
+			if (!FMath::IsNearlyZero(Throttle))
+			{
+				const float Speed = M.Speed * (Throttle > 0.f ? Throttle : Throttle * 0.4f);
+				const FVector2f Fwd(FMath::Cos(P.Facing), FMath::Sin(P.Facing));
+				const FVector2f NewP = P.P + Fwd * Speed * SIM_DT;
+				if (bAir || G.Map.IsWater(NewP)) { P.P = NewP; }
+				else if (G.Map.IsWater(FVector2f(NewP.X, P.P.Y))) { P.P.X = NewP.X; }
+				else if (G.Map.IsWater(FVector2f(P.P.X, NewP.Y))) { P.P.Y = NewP.Y; }
+			}
+			continue;
+		}
 
 		// Attack-move: pick up hostiles spotted en route.
 		if (M.Order == EMoveOrder::AttackMove && M.ChaseTarget == INVALID_ENTITY)
@@ -474,6 +535,49 @@ void SimSys::RunCombat(FSimGame& G)
 		const FPosC* P = G.World.Pos.Find(Eid);
 		if (!P) { continue; }
 		const int32 Player = G.World.Own[Eid].Player;
+
+		// Direct player control: never auto-fire. While the trigger is held,
+		// aim-assist onto the visible enemy nearest the view direction
+		// (within a 60-degree cone) and fire every ready weapon at it.
+		if (const FManualC* MC = G.World.Manual.Find(Eid))
+		{
+			C.Target = INVALID_ENTITY;
+			if (!MC->bFireHeld) { continue; }
+			FEntityId Best = INVALID_ENTITY;
+			float BestAngle = FMath::DegreesToRadians(60.f);
+			for (const FEntityId Other : SimSortedKeys(G.World.Health))
+			{
+				if (!IsEnemyTargetable(G, Player, Other)) { continue; }
+				const FVector2f To = G.World.Pos[Other].P - P->P;
+				if (To.Size() > C.MaxRange) { continue; }
+				const float Angle = FMath::Abs(FMath::FindDeltaAngleRadians(
+					MC->DesiredFacing, FMath::Atan2(To.Y, To.X)));
+				if (Angle < BestAngle) { BestAngle = Angle; Best = Other; }
+			}
+			if (Best == INVALID_ENTITY) { continue; }
+			const FVector2f TP2 = G.World.Pos[Best].P;
+			const float Dist2 = (TP2 - P->P).Size();
+			for (int32 Wi = 0; Wi < C.Weapons.Num(); ++Wi)
+			{
+				const FWeaponTpl& W = C.Weapons[Wi];
+				if (C.State[Wi].CooldownTicks > 0 || Dist2 > W.Range) { continue; }
+				if (!MatchesFilter(G, W.Filter, Best)) { continue; }
+				const FEntityId ProjId = G.World.Create();
+				FProjC PC;
+				PC.P = P->P;
+				PC.LastKnown = TP2;
+				PC.Target = Best;
+				PC.Speed = W.ProjSpeed;
+				PC.Damage = W.Damage;
+				PC.Type = W.Type;
+				PC.SourcePlayer = Player;
+				G.World.Proj.Add(ProjId, PC);
+				const float ReloadMult = (C.DisruptTicks > 0) ? 1.6f : 1.f;
+				C.State[Wi].CooldownTicks =
+					FMath::Max(1, FMath::RoundToInt32(W.Reload * ReloadMult * SIM_TICKS_PER_SEC));
+			}
+			continue;
+		}
 
 		// Prefer an explicit chase target when it is in range.
 		const FMoverC* M = G.World.Mover.Find(Eid);

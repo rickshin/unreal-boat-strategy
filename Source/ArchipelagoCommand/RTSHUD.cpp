@@ -373,14 +373,21 @@ void ARTSHUD::DrawAlertsAndHints()
 		}
 	}
 
-	// Unit-view mode hint.
+	// Unit-view mode: hint bar + aiming crosshair.
 	if (PC && PC->IsInUnitView())
 	{
-		const FString Hint = TEXT("UNIT VIEW  -  hold right mouse: look around   wheel: distance   V / Esc: overhead");
+		const FString Hint = TEXT("DIRECT CONTROL  -  W/S: throttle   A/D: rudder   Space: fire   hold right mouse: aim   V / Esc: overhead");
 		float TW, TH;
 		GetTextSize(Hint, TW, TH, Font);
 		DrawRect(PanelBg, (Canvas->SizeX - TW) * 0.5f - 10.f, Canvas->SizeY - 34.f, TW + 20.f, 26.f);
 		DrawText(Hint, TextMain, (Canvas->SizeX - TW) * 0.5f, Canvas->SizeY - 30.f, Font);
+
+		const float CX = Canvas->SizeX * 0.5f, CY = Canvas->SizeY * 0.5f;
+		const FLinearColor Cross(1.f, 1.f, 1.f, 0.8f);
+		DrawRect(Cross, CX - 9.f, CY - 1.f, 6.f, 2.f);
+		DrawRect(Cross, CX + 3.f, CY - 1.f, 6.f, 2.f);
+		DrawRect(Cross, CX - 1.f, CY - 9.f, 2.f, 6.f);
+		DrawRect(Cross, CX - 1.f, CY + 3.f, 2.f, 6.f);
 	}
 
 	// Game over banner.

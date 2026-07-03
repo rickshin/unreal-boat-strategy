@@ -97,6 +97,16 @@ struct FBuildTaskC
 	FEntityId Site = INVALID_ENTITY;   // the under-construction structure
 };
 
+// Direct player control (unit view): while present, the unit ignores
+// waypoints and never auto-fires; movement and firing come from the
+// latest ManualInput command. Pure data, fed only through commands.
+struct FManualC
+{
+	FVector2f Axes = FVector2f::ZeroVector;   // x = forward, y = strafe right
+	float DesiredFacing = 0.f;                // radians, where the player looks
+	bool bFireHeld = false;
+};
+
 // ---------------------------------------------------------------------------
 // World: entities are ints, one TMap store per component type. Systems must
 // iterate via SimSortedKeys() for determinism.
@@ -120,6 +130,7 @@ struct FSimWorld
 	TMap<FEntityId, FVisionC> Vision;
 	TMap<FEntityId, FProjC> Proj;
 	TMap<FEntityId, FBuildTaskC> BuildTask;
+	TMap<FEntityId, FManualC> Manual;
 
 	FEntityId Create() { const FEntityId Id = NextId++; Alive.Add(Id); return Id; }
 
@@ -129,7 +140,7 @@ struct FSimWorld
 		Pos.Remove(Id); Own.Remove(Id); Unit.Remove(Id); Struct.Remove(Id);
 		Health.Remove(Id); Mover.Remove(Id); Combat.Remove(Id); Prod.Remove(Id);
 		Miner.Remove(Id); Repair.Remove(Id); Vision.Remove(Id); Proj.Remove(Id);
-		BuildTask.Remove(Id);
+		BuildTask.Remove(Id); Manual.Remove(Id);
 	}
 
 	bool IsAlive(FEntityId Id) const { return Alive.Contains(Id); }
@@ -140,7 +151,12 @@ struct FSimWorld
 // which is the lockstep-ready boundary.
 // ---------------------------------------------------------------------------
 
-enum class ECmdType : uint8 { Move, Attack, AttackMove, Stop, Produce, Build };
+enum class ECmdType : uint8
+{
+	Move, Attack, AttackMove, Stop, Produce, Build,
+	ManualControl,   // bFlag = take/release direct control of Units[0]
+	ManualInput      // Target = (fwd,strafe) axes, FacingRad, bFlag = fire held
+};
 
 struct FSimCommand
 {
@@ -150,6 +166,8 @@ struct FSimCommand
 	FVector2f Target = FVector2f::ZeroVector;
 	FEntityId TargetEid = INVALID_ENTITY;
 	FName TplId;                        // Produce: unit id, Build: structure id
+	float FacingRad = 0.f;              // ManualInput: view direction
+	bool bFlag = false;                 // ManualControl: enable / ManualInput: fire
 };
 
 // ---------------------------------------------------------------------------

@@ -46,7 +46,8 @@ private:
 	void OnToggleUnitView();
 	void OnAttackMoveKey();
 	void OnStopKey();
-	void OnJumpToHQ();
+	void OnSpacePressed();    // overhead: jump to HQ; unit view: fire held
+	void OnSpaceReleased();
 	void OnCancelEsc();
 	void OnRestart();
 	void OnHotkey(int32 Index);
@@ -68,6 +69,8 @@ private:
 	FVector2D CameraAxis = FVector2D::ZeroVector;
 	FVector2D LookAxis = FVector2D::ZeroVector;
 	bool bLookActive = false;  // RMB held while in unit (follow) view
+	bool bFireHeld = false;    // Space held while in unit (follow) view
+	FEntityId PrevFollowed = INVALID_ENTITY;   // detects enter/exit for sim handover
 	bool bEdgeScroll = true;   // -NoEdgeScroll disables (automated captures)
 
 public:

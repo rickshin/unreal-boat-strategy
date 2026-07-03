@@ -32,6 +32,8 @@ public:
 	bool IsFollowing() const { return FollowEid != INVALID_ENTITY; }
 	FEntityId FollowedEntity() const { return FollowEid; }
 	void AddLookInput(float YawDelta, float PitchDelta);
+	// World-space view yaw in degrees (drives the unit's facing in manual control).
+	float GetViewYawDegrees() const { return ViewYawDeg; }
 
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -52,5 +54,6 @@ private:
 	float FollowDist = 1600.f;
 	float LookYawOff = 0.f;
 	float LookPitch = -12.f;
+	float ViewYawDeg = 0.f;
 	bool bFollowJustEntered = false;
 };

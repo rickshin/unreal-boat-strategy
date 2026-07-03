@@ -85,13 +85,15 @@ void ARTSCameraPawn::Tick(float DeltaSeconds)
 		else
 		{
 			const FVector Target = Actor->GetActorLocation();
+			const float UnitYaw = Actor->GetActorRotation().Yaw;
 			FollowFocus = bFollowJustEntered
 				? Target : FMath::VInterpTo(FollowFocus, Target, DeltaSeconds, 8.f);
 			bFollowJustEntered = false;
 
-			// Over-the-shoulder: sit behind the hull along its heading, with
-			// the free-look offsets applied on top.
-			const FRotator ViewRot(LookPitch, Actor->GetActorRotation().Yaw + LookYawOff, 0.f);
+			// Chase cam: swings with the hull as the rudder turns it, with
+			// the free-look offset (RMB aim) applied on top.
+			ViewYawDeg = UnitYaw + LookYawOff;
+			const FRotator ViewRot(LookPitch, ViewYawDeg, 0.f);
 			const FVector CamPos = FollowFocus - ViewRot.Vector() * FollowDist + FVector(0, 0, 340.f);
 			SetActorLocation(CamPos);
 			SetActorRotation(ViewRot);
