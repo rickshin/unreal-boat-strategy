@@ -14,6 +14,8 @@ class AWaterZone;
 class AWaterBody;
 class UWaterBodyComponent;
 class UNiagaraSystem;
+class UAudioComponent;
+class USoundWaveProcedural;
 
 struct FACAlert
 {
@@ -64,6 +66,8 @@ private:
 	void SyncEntityActors();
 	void UpdateVisuals();
 	void DrainSimEvents();
+	void StartMusic();
+	void PlayNextTrack();
 
 	TUniquePtr<FSimGame> SimGame;
 	float Accumulator = 0.f;
@@ -89,4 +93,17 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UNiagaraSystem> SplashFX;      // water-impact foam burst
+
+	// Soundtrack: mp3s from Audio/soundtrack/, shuffled, decoded off-thread
+	// (-NoMusic disables, -MusicVolume=0..1 adjusts).
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> MusicComp;
+	UPROPERTY()
+	TObjectPtr<USoundWaveProcedural> MusicWave;
+	TArray<FString> MusicPlaylist;
+	int32 MusicIndex = 0;
+	double MusicEndTime = -1.0;
+	float MusicVolume = 0.5f;
+	bool bMusicEnabled = true;
+	bool bMusicDecoding = false;
 };

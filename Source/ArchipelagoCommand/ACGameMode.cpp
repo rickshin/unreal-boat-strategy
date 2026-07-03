@@ -24,6 +24,11 @@
 #include "WaterTerrainComponent.h"
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
+#include "MusicDecoder.h"
+#include "Sound/SoundWaveProcedural.h"
+#include "Components/AudioComponent.h"
+#include "Async/Async.h"
+#include "HAL/FileManager.h"
 #include "UnrealClient.h"
 #include "Engine/StaticMesh.h"
 #include "Components/StaticMeshComponent.h"
@@ -78,8 +83,79 @@ void AACGameMode::BeginPlay()
 		UE_LOG(LogACGame, Warning, TEXT("Splash Niagara template not found; impacts will have no foam burst"));
 	}
 
+	bMusicEnabled = !FParse::Param(CmdLine, TEXT("NoMusic"));
+	FParse::Value(CmdLine, TEXT("MusicVolume="), MusicVolume);
+	MusicVolume = FMath::Clamp(MusicVolume, 0.f, 1.f);
+
 	SpawnEnvironment();
 	StartMatch(Seed);
+	StartMusic();
+}
+
+void AACGameMode::StartMusic()
+{
+	if (!bMusicEnabled) { return; }
+	const FString Dir = FPaths::ProjectDir() / TEXT("Audio/soundtrack");
+	TArray<FString> Files;
+	IFileManager::Get().FindFiles(Files, *(Dir / TEXT("*.mp3")), true, false);
+	if (Files.Num() == 0)
+	{
+		UE_LOG(LogACGame, Log, TEXT("No soundtrack found in %s"), *Dir);
+		return;
+	}
+	for (const FString& F : Files) { MusicPlaylist.Add(Dir / F); }
+
+	// Shuffle (render-side RNG; the soundtrack must never touch the sim).
+	FRandomStream Rng{ int32(FPlatformTime::Cycles()) };
+	for (int32 i = MusicPlaylist.Num() - 1; i > 0; --i)
+	{
+		MusicPlaylist.Swap(i, Rng.RandRange(0, i));
+	}
+	PlayNextTrack();
+}
+
+void AACGameMode::PlayNextTrack()
+{
+	if (bMusicDecoding || MusicPlaylist.Num() == 0) { return; }
+	bMusicDecoding = true;
+	const FString Path = MusicPlaylist[MusicIndex++ % MusicPlaylist.Num()];
+
+	// Decode off-thread (a 4-minute mp3 takes a moment), then play on the
+	// game thread. Weak ptr guards against shutdown mid-decode.
+	TWeakObjectPtr<AACGameMode> WeakThis(this);
+	Async(EAsyncExecution::ThreadPool, [WeakThis, Path]()
+	{
+		FDecodedMusic Decoded;
+		const bool bOk = DecodeMp3File(Path, Decoded);
+		AsyncTask(ENamedThreads::GameThread, [WeakThis, Path, bOk, Decoded = MoveTemp(Decoded)]() mutable
+		{
+			AACGameMode* Self = WeakThis.Get();
+			if (!Self) { return; }
+			Self->bMusicDecoding = false;
+			if (!bOk)
+			{
+				UE_LOG(LogACGame, Warning, TEXT("Failed to decode soundtrack: %s"), *Path);
+				return;
+			}
+
+			USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(Self);
+			Wave->SetSampleRate(Decoded.SampleRate);
+			Wave->NumChannels = Decoded.Channels;
+			Wave->Duration = Decoded.Duration;
+			Wave->SoundGroup = SOUNDGROUP_Music;
+			Wave->bLooping = false;
+			Wave->QueueAudio(Decoded.PCM.GetData(), Decoded.PCM.Num());
+
+			if (Self->MusicComp) { Self->MusicComp->Stop(); }
+			Self->MusicWave = Wave;
+			Self->MusicComp = UGameplayStatics::CreateSound2D(Self, Wave, Self->MusicVolume,
+				1.f, 0.f, nullptr, /*bPersistAcrossLevelTransition=*/true, /*bAutoDestroy=*/false);
+			if (Self->MusicComp) { Self->MusicComp->Play(); }
+			Self->MusicEndTime = Self->GetWorld()->GetTimeSeconds() + Decoded.Duration;
+			UE_LOG(LogACGame, Log, TEXT("Now playing: %s (%.0fs)"),
+				*FPaths::GetBaseFilename(Path), Decoded.Duration);
+		});
+	});
 }
 
 void AACGameMode::SpawnEnvironment()
@@ -362,6 +438,13 @@ void AACGameMode::Tick(float DeltaSeconds)
 
 	const double Now = GetWorld()->GetTimeSeconds();
 	ActiveAlerts.RemoveAll([Now](const FACAlert& A) { return Now > A.Expiry; });
+
+	// Advance the soundtrack shortly after the current track runs out.
+	if (bMusicEnabled && MusicEndTime > 0.0 && Now > MusicEndTime + 1.5)
+	{
+		MusicEndTime = -1.0;
+		PlayNextTrack();
+	}
 
 	// Debug capture for automated visual checks (-AutoShotAt=N).
 	if (AutoShotAt > 0.f && Now >= AutoShotAt)

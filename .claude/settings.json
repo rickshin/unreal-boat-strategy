@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(timeout 75 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=20 -NoEdgeScroll)",
-      "Bash(timeout 75 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=20 -NoEdgeScroll '-ExecCmds=ShowFlag.Wireframe 1')"
+      "Bash(timeout 75 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=20 -NoEdgeScroll '-ExecCmds=ShowFlag.Wireframe 1')",
+      "Bash(file ~/Projects/unreal-engine-project/Audio/soundtrack/*.mp3)",
+      "Bash(curl -sI https://raw.githubusercontent.com/lieff/minimp3/master/minimp3.h)",
+      "Bash(mkdir -p ~/Projects/unreal-engine-project/Source/ArchipelagoCommand/ThirdParty)",
+      "Bash(curl -sO https://raw.githubusercontent.com/lieff/minimp3/master/minimp3.h)",
+      "Bash(curl -sO https://raw.githubusercontent.com/lieff/minimp3/master/minimp3_ex.h)",
+      "Bash(curl -sO https://raw.githubusercontent.com/lieff/minimp3/master/LICENSE)",
+      "Bash(timeout 60 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1280 -resy=720 -Seed=7 -NoEdgeScroll)"
     ]
   }
 }

@@ -83,7 +83,16 @@ Session flags (append to the `-game` command line):
 -Faction=tempest      # play the swarm faction (default: dominion)
 -Difficulty=easy      # gentler AI (easy | normal | hard)
 -Spectate             # watch AI vs AI with full vision
+-ClassicOcean         # procedural Gerstner sea instead of the Water plugin
+-NoMusic              # silence the soundtrack
+-MusicVolume=0.3      # soundtrack volume (0..1, default 0.5)
 ```
+
+The soundtrack is played straight from the mp3 files in
+`Audio/soundtrack/` — a shuffled playlist decoded at runtime with the
+vendored [minimp3](https://github.com/lieff/minimp3) (CC0) into a
+procedural sound wave, so there are still no binary uassets. Drop more
+mp3s in that folder and they join the rotation.
 
 Example: replay the exact map we verified, as the swarm, vs a hard AI:
 
@@ -214,9 +223,10 @@ original design document (§ numbers refer to it):
   minimap (§13), three-layer AI (§14), HUD (§15), procedural symmetric
   maps (§16), HQ-kill victory (§17), fish + rock decorations exactly per
   the §18 rules, 20 Hz determinism + state hash (§4, §19). 
-- **Views:** Allow the play to select a unit, press, v, an over the shoulder
+- **Views:** Allow the player to select a unit, press, v, an over the shoulder
   view from the perspective of the unit. If they hit v again, overhead
-  view comes back.
+  view comes back. Also, swap out the arrow keys with awsd for moving around
+  map.
 - **Visuals:** stylized low-poly props over **Epic's Water plugin ocean**
   (done): a `WaterZone` + `WaterBodyOcean` are spawned from C++ at runtime
   with the plugin's ocean material, Gerstner wave asset and underwater

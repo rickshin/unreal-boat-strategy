@@ -21,3 +21,4 @@ compile_commands.json
 # Packaged output
 /Packaged/
 /ArchiveForDistribution/
+.claude/scheduled_tasks.lock
