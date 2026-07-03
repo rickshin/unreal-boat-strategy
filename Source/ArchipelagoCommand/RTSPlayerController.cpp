@@ -42,6 +42,8 @@ void ARTSPlayerController::SetupInputComponent()
 	InputComponent->BindAction(TEXT("Select"), IE_Pressed, this, &ARTSPlayerController::OnSelectPressed);
 	InputComponent->BindAction(TEXT("Select"), IE_Released, this, &ARTSPlayerController::OnSelectReleased);
 	InputComponent->BindAction(TEXT("Command"), IE_Pressed, this, &ARTSPlayerController::OnCommandPressed);
+	InputComponent->BindAction(TEXT("Command"), IE_Released, this, &ARTSPlayerController::OnCommandReleased);
+	InputComponent->BindAction(TEXT("ToggleUnitView"), IE_Pressed, this, &ARTSPlayerController::OnToggleUnitView);
 	InputComponent->BindAction(TEXT("AttackMove"), IE_Pressed, this, &ARTSPlayerController::OnAttackMoveKey);
 	InputComponent->BindAction(TEXT("Stop"), IE_Pressed, this, &ARTSPlayerController::OnStopKey);
 	InputComponent->BindAction(TEXT("JumpToHQ"), IE_Pressed, this, &ARTSPlayerController::OnJumpToHQ);
@@ -56,6 +58,13 @@ void ARTSPlayerController::SetupInputComponent()
 	InputComponent->BindAxis(TEXT("CameraX"), this, &ARTSPlayerController::AxisCameraX);
 	InputComponent->BindAxis(TEXT("CameraY"), this, &ARTSPlayerController::AxisCameraY);
 	InputComponent->BindAxis(TEXT("CameraZoom"), this, &ARTSPlayerController::AxisZoom);
+	InputComponent->BindAxis(TEXT("LookX"), this, &ARTSPlayerController::AxisLookX);
+	InputComponent->BindAxis(TEXT("LookY"), this, &ARTSPlayerController::AxisLookY);
+}
+
+bool ARTSPlayerController::IsInUnitView() const
+{
+	return CamPawn() && CamPawn()->IsFollowing();
 }
 
 bool ARTSPlayerController::CursorOnSea(FVector2D& OutWorldXY) const
@@ -76,23 +85,38 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-	// Camera: keys + screen-edge scroll.
-	FVector2D Pan = CameraAxis;
+	// If the followed unit died while looking, restore the cursor.
+	if (bLookActive && !IsInUnitView()) { OnCommandReleased(); }
+
+	// Unit view: RMB-held mouse deltas orbit the chase camera.
+	if (IsInUnitView())
+	{
+		if (bLookActive && !LookAxis.IsNearlyZero())
+		{
+			CamPawn()->AddLookInput(LookAxis.X * 1.6f, LookAxis.Y * 1.6f);
+		}
+	}
+	else
+	{
+		// Overhead camera: WASD/arrow keys + screen-edge scroll.
+		FVector2D Pan = CameraAxis;
+		float MX, MY;
+		int32 VW, VH;
+		GetViewportSize(VW, VH);
+		if (bEdgeScroll && GetMousePosition(MX, MY) && VW > 0 && VH > 0)
+		{
+			const float Edge = 14.f;
+			if (MX <= Edge) { Pan.Y -= 1.f; }             // screen left = -world Y
+			if (MX >= VW - Edge) { Pan.Y += 1.f; }
+			if (MY <= Edge) { Pan.X += 1.f; }             // screen up = +world X
+			if (MY >= VH - Edge) { Pan.X -= 1.f; }
+		}
+		if (!Pan.IsNearlyZero() && CamPawn())
+		{
+			CamPawn()->Pan(Pan.GetSafeNormal(), DeltaTime);
+		}
+	}
 	float MX, MY;
-	int32 VW, VH;
-	GetViewportSize(VW, VH);
-	if (bEdgeScroll && GetMousePosition(MX, MY) && VW > 0 && VH > 0)
-	{
-		const float Edge = 14.f;
-		if (MX <= Edge) { Pan.Y -= 1.f; }             // screen left = -world Y
-		if (MX >= VW - Edge) { Pan.Y += 1.f; }
-		if (MY <= Edge) { Pan.X += 1.f; }             // screen up = +world X
-		if (MY >= VH - Edge) { Pan.X -= 1.f; }
-	}
-	if (!Pan.IsNearlyZero() && CamPawn())
-	{
-		CamPawn()->Pan(Pan.GetSafeNormal(), DeltaTime);
-	}
 
 	if (bDragging)
 	{
@@ -141,10 +165,17 @@ void ARTSPlayerController::OnSelectPressed()
 		FVector2D World;
 		if (Hud->MinimapToWorld(Screen, World))
 		{
-			if (CamPawn()) { CamPawn()->JumpTo(World); }
+			if (CamPawn())
+			{
+				CamPawn()->ExitFollow();   // minimap jump implies overhead
+				CamPawn()->JumpTo(World);
+			}
 			return;
 		}
 	}
+
+	// In unit view, clicks on the world are ignored (UI still works above).
+	if (IsInUnitView()) { return; }
 
 	// Placement mode: this click places the structure.
 	if (!PlacementTpl.IsNone())
@@ -274,6 +305,13 @@ FEntityId ARTSPlayerController::PickEntityAt(const FVector2D& WorldXY, bool bEne
 
 void ARTSPlayerController::OnCommandPressed()
 {
+	// In unit view the right button drives the free-look instead of orders.
+	if (IsInUnitView())
+	{
+		bLookActive = true;
+		bShowMouseCursor = false;
+		return;
+	}
 	AACGameMode* Mode = GM();
 	if (!Mode || !Mode->Sim() || Mode->IsSpectating()) { return; }
 	float MX, MY;
@@ -326,9 +364,36 @@ void ARTSPlayerController::IssuePointCommand(const FVector2D& WorldXY, bool bAtt
 	Mode->QueueCommand(Cmd);
 }
 
+void ARTSPlayerController::OnCommandReleased()
+{
+	if (bLookActive)
+	{
+		bLookActive = false;
+		bShowMouseCursor = true;
+	}
+}
+
+void ARTSPlayerController::OnToggleUnitView()
+{
+	ARTSCameraPawn* Cam = CamPawn();
+	if (!Cam) { return; }
+	if (Cam->IsFollowing())
+	{
+		Cam->ExitFollow();
+		OnCommandReleased();
+		return;
+	}
+	if (Selection.Num() > 0)
+	{
+		PlacementTpl = NAME_None;
+		bAttackMovePending = false;
+		Cam->EnterFollow(Selection[0]);
+	}
+}
+
 void ARTSPlayerController::OnAttackMoveKey()
 {
-	if (Selection.Num() > 0) { bAttackMovePending = true; }
+	if (Selection.Num() > 0 && !IsInUnitView()) { bAttackMovePending = true; }
 }
 
 void ARTSPlayerController::OnStopKey()
@@ -355,6 +420,7 @@ void ARTSPlayerController::OnJumpToHQ()
 
 void ARTSPlayerController::OnCancelEsc()
 {
+	if (IsInUnitView()) { OnToggleUnitView(); return; }
 	if (!PlacementTpl.IsNone()) { PlacementTpl = NAME_None; return; }
 	if (bAttackMovePending) { bAttackMovePending = false; return; }
 	if (Selection.Num() > 0)
@@ -424,6 +490,8 @@ void ARTSPlayerController::OnUIButton(int32 Index)
 
 void ARTSPlayerController::AxisCameraX(float V) { CameraAxis.Y = V; }
 void ARTSPlayerController::AxisCameraY(float V) { CameraAxis.X = V; }
+void ARTSPlayerController::AxisLookX(float V) { LookAxis.X = V; }
+void ARTSPlayerController::AxisLookY(float V) { LookAxis.Y = V; }
 
 void ARTSPlayerController::AxisZoom(float V)
 {

@@ -42,6 +42,8 @@ private:
 	void OnSelectPressed();
 	void OnSelectReleased();
 	void OnCommandPressed();
+	void OnCommandReleased();
+	void OnToggleUnitView();
 	void OnAttackMoveKey();
 	void OnStopKey();
 	void OnJumpToHQ();
@@ -51,6 +53,8 @@ private:
 	void AxisCameraX(float V);
 	void AxisCameraY(float V);
 	void AxisZoom(float V);
+	void AxisLookX(float V);
+	void AxisLookY(float V);
 
 	void FinishSelection(bool bIsClick);
 	void IssuePointCommand(const FVector2D& WorldXY, bool bAttackMove);
@@ -62,5 +66,10 @@ private:
 	ARTSHUD* GetRTSHUD() const;
 
 	FVector2D CameraAxis = FVector2D::ZeroVector;
+	FVector2D LookAxis = FVector2D::ZeroVector;
+	bool bLookActive = false;  // RMB held while in unit (follow) view
 	bool bEdgeScroll = true;   // -NoEdgeScroll disables (automated captures)
+
+public:
+	bool IsInUnitView() const;
 };

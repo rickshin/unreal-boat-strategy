@@ -111,17 +111,16 @@ build the `ArchipelagoCommandEditor` target, open, press Play.
 |---|---|
 | Left-drag / left-click | Select units (Shift adds) |
 | Right-click | Move; on an enemy: attack; on minimap: move there |
-| `A` then click | Attack-move (engage everything on the way) |
-| `S` | Stop |
+| `Q` then click | Attack-move (engage everything on the way) |
+| `H` | Stop (halt) |
+| `V` | Unit view: over-the-shoulder camera on the selected unit; `V`/`Esc` returns overhead |
+| Hold right mouse (in unit view) | Look around; mouse wheel adjusts follow distance |
 | `1`–`9` (or panel buttons) | Production / build options of the selection |
-| Arrow keys, screen edge, minimap click | Camera pan / jump |
+| WASD / arrow keys, screen edge, minimap click | Camera pan / jump |
 | Mouse wheel | Zoom |
 | `Space` | Jump to your HQ |
-| `Esc` | Cancel placement/attack-move, clear selection, quit |
+| `Esc` | Exit unit view, cancel placement/attack-move, clear selection, quit |
 | `R` (after game over) | New match |
-
-*(WASD camera from the Python build gave way to arrow keys: `A` and `S`
-are command hotkeys.)*
 
 Build structures by selecting your builder (Worker Barge / Mobile Command
 Vessel), pressing a structure hotkey, and clicking a valid site: mining
@@ -223,10 +222,13 @@ original design document (§ numbers refer to it):
   minimap (§13), three-layer AI (§14), HUD (§15), procedural symmetric
   maps (§16), HQ-kill victory (§17), fish + rock decorations exactly per
   the §18 rules, 20 Hz determinism + state hash (§4, §19). 
-- **Views:** Allow the player to select a unit, press, v, an over the shoulder
-  view from the perspective of the unit. If they hit v again, overhead
-  view comes back. Also, swap out the arrow keys with awsd for moving around
-  map.
+- **Views (done):** select a unit and press `V` for an over-the-shoulder
+  chase camera that follows it — hold the right mouse button to look
+  around, mouse wheel adjusts distance, `V`/`Esc` returns to the
+  overhead view (automatic if the unit dies). Camera pan is now
+  WASD (plus arrows), which moved attack-move to `Q` and stop to `H`.
+  Debug flag `-FollowView` starts a session already following the first
+  unit, for automated screenshots.
 - **Visuals:** stylized low-poly props over **Epic's Water plugin ocean**
   (done): a `WaterZone` + `WaterBodyOcean` are spawned from C++ at runtime
   with the plugin's ocean material, Gerstner wave asset and underwater

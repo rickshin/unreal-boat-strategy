@@ -249,6 +249,20 @@ void AACGameMode::StartMatch(uint64 Seed)
 			}
 		}
 	}
+	// Debug: -FollowView drops straight into the unit view on the first own
+	// unit (used for automated visual checks of the chase camera).
+	if (PC && FParse::Param(FCommandLine::Get(), TEXT("FollowView")))
+	{
+		if (ARTSCameraPawn* Cam = Cast<ARTSCameraPawn>(PC->GetPawn()))
+		{
+			for (const FEntityId Eid : SimSortedKeys(SimGame->World.Unit))
+			{
+				const FOwnerC* O = SimGame->World.Own.Find(Eid);
+				if (O && O->Player == LocalPlayer()) { Cam->EnterFollow(Eid); break; }
+			}
+		}
+	}
+
 	UE_LOG(LogACGame, Log, TEXT("Match started: seed %llu, hash %llu"), Seed, SimGame->StateHash());
 }
 

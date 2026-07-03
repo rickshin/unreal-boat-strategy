@@ -373,6 +373,16 @@ void ARTSHUD::DrawAlertsAndHints()
 		}
 	}
 
+	// Unit-view mode hint.
+	if (PC && PC->IsInUnitView())
+	{
+		const FString Hint = TEXT("UNIT VIEW  -  hold right mouse: look around   wheel: distance   V / Esc: overhead");
+		float TW, TH;
+		GetTextSize(Hint, TW, TH, Font);
+		DrawRect(PanelBg, (Canvas->SizeX - TW) * 0.5f - 10.f, Canvas->SizeY - 34.f, TW + 20.f, 26.f);
+		DrawText(Hint, TextMain, (Canvas->SizeX - TW) * 0.5f, Canvas->SizeY - 30.f, Font);
+	}
+
 	// Game over banner.
 	if (G.Winner >= 0)
 	{

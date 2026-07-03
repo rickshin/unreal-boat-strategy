@@ -9,7 +9,11 @@
       "Bash(curl -sO https://raw.githubusercontent.com/lieff/minimp3/master/minimp3.h)",
       "Bash(curl -sO https://raw.githubusercontent.com/lieff/minimp3/master/minimp3_ex.h)",
       "Bash(curl -sO https://raw.githubusercontent.com/lieff/minimp3/master/LICENSE)",
-      "Bash(timeout 60 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1280 -resy=720 -Seed=7 -NoEdgeScroll)"
+      "Bash(timeout 60 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1280 -resy=720 -Seed=7 -NoEdgeScroll)",
+      "Bash(rm -f Saved/Screenshots/LinuxEditor/AutoShot.png)",
+      "Bash(timeout 75 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=15 -NoEdgeScroll -FollowView -NoMusic)",
+      "Bash(ls Saved/Screenshots/LinuxEditor/AutoShot.png)",
+      "Bash(timeout 45 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=6 -NoEdgeScroll -FollowView -NoMusic)"
     ]
   }
 }
