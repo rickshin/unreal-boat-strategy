@@ -175,7 +175,9 @@ struct FSimPlayer
 
 struct FSimEvent
 {
-	enum class EKind : uint8 { UnderAttack, UnitLost, ProductionDone, Victory } Kind;
+	// Splash is a render-only cue (projectile water impact); it never
+	// feeds back into the sim.
+	enum class EKind : uint8 { UnderAttack, UnitLost, ProductionDone, Victory, Splash } Kind;
 	int32 Player = -1;
 	FVector2f Pos = FVector2f::ZeroVector;
 	FString Text;

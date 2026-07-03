@@ -1,4 +1,5 @@
 #include "UnitActor.h"
+#include "ACGameMode.h"
 #include "ACTypes.h"
 #include "OceanActor.h"
 #include "Sim/SimGame.h"
@@ -251,13 +252,17 @@ void AUnitActor::UpdateVisual(float Alpha, float WorldTime)
 	}
 	else if (BobDamp > 0.f)
 	{
-		// Ride a damped version of the swell the ocean mesh renders: lift
-		// with the wave and lean gently along the water's surface normal.
-		Z = AOceanActor::WaveHeight(XY, WorldTime) * BobDamp * 0.5f;
-		const FVector2D Grad = AOceanActor::WaveGradient(XY, WorldTime) * (BobDamp * 0.45f);
-		const FVector SurfaceN = FVector(-Grad.X, -Grad.Y, 1.f).GetSafeNormal();
+		// Ride a damped version of the rendered water surface (Water plugin
+		// waves when active, classic waves otherwise): lift with the swell
+		// and lean gently along the surface normal.
+		if (!GM) { GM = GetWorld()->GetAuthGameMode<AACGameMode>(); }
+		FVector SurfLoc(XY.X, XY.Y, AC_SEA_LEVEL);
+		FVector SurfN = FVector::UpVector;
+		if (GM) { GM->SampleOceanSurface(XY, WorldTime, SurfLoc, SurfN); }
+		Z = SurfLoc.Z * BobDamp * 0.5f;
+		const FVector TiltN = FMath::Lerp(FVector::UpVector, SurfN, BobDamp * 0.45f).GetSafeNormal();
 		const FVector Fwd(FMath::Cos(FacingLerp), FMath::Sin(FacingLerp), 0.f);
-		Rot = FRotationMatrix::MakeFromZX(SurfaceN, Fwd).Rotator();
+		Rot = FRotationMatrix::MakeFromZX(TiltN, Fwd).Rotator();
 	}
 
 	// Structures rise out of the water while under construction.
@@ -318,7 +323,15 @@ void AProjectileActor::UpdateVisual(float Alpha, float WorldTime)
 	float Z;
 	switch (WeaponType)
 	{
-	case EWeaponType::Torpedo: Z = AOceanActor::WaveHeight(XY, WorldTime) - 45.f; break;
+	case EWeaponType::Torpedo:
+	{
+		if (!GM) { GM = GetWorld()->GetAuthGameMode<AACGameMode>(); }
+		FVector SurfLoc(XY.X, XY.Y, AC_SEA_LEVEL);
+		FVector SurfN;
+		if (GM) { GM->SampleOceanSurface(XY, WorldTime, SurfLoc, SurfN); }
+		Z = SurfLoc.Z - 45.f;   // torpedoes run just under the surface
+		break;
+	}
 	case EWeaponType::AA:      Z = AC_AIR_ALTITUDE * 0.55f; break;
 	default:                   Z = 220.f; break;
 	}

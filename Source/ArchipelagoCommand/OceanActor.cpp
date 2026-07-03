@@ -49,9 +49,10 @@ AOceanActor::AOceanActor()
 	Mesh->SetCastShadow(false);
 }
 
-void AOceanActor::Build(int32 SizeCells)
+void AOceanActor::Build(int32 SizeCells, bool bShowWaterSheet)
 {
 	const float MapSize = SizeCells * AC_CELL;
+	bSheetVisible = bShowWaterSheet;
 	const float Margin = MapSize * 0.25f;
 	SheetOrigin = -Margin;
 	GridVerts = 97;
@@ -78,15 +79,17 @@ void AOceanActor::Build(int32 SizeCells)
 			Triangles.Append({ I, I + GridVerts, I + 1, I + 1, I + GridVerts, I + GridVerts + 1 });
 		}
 	}
-	Mesh->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs,
-		TArray<FLinearColor>(), TArray<FProcMeshTangent>(), false);
-
 	UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, AC_MAT_BASIC);
-	if (Base)
+	if (bSheetVisible)
 	{
-		UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Base, this);
-		MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.02f, 0.11f, 0.22f));
-		Mesh->SetMaterial(0, MID);
+		Mesh->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs,
+			TArray<FLinearColor>(), TArray<FProcMeshTangent>(), false);
+		if (Base)
+		{
+			UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Base, this);
+			MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.02f, 0.11f, 0.22f));
+			Mesh->SetMaterial(0, MID);
+		}
 	}
 
 	// Fish pool: render-only RNG stream, never touches the sim.
@@ -120,15 +123,18 @@ void AOceanActor::Tick(float DeltaSeconds)
 	if (Vertices.Num() == 0) { return; }
 	const float T = GetWorld()->GetTimeSeconds();
 
-	for (int32 i = 0; i < Vertices.Num(); ++i)
+	if (bSheetVisible)
 	{
-		const FVector2D XY(Vertices[i].X, Vertices[i].Y);
-		Vertices[i].Z = WaveHeight(XY, T);
-		const FVector2D Grad = WaveGradient(XY, T);
-		Normals[i] = FVector(-Grad.X, -Grad.Y, 1.f).GetSafeNormal();
+		for (int32 i = 0; i < Vertices.Num(); ++i)
+		{
+			const FVector2D XY(Vertices[i].X, Vertices[i].Y);
+			Vertices[i].Z = WaveHeight(XY, T);
+			const FVector2D Grad = WaveGradient(XY, T);
+			Normals[i] = FVector(-Grad.X, -Grad.Y, 1.f).GetSafeNormal();
+		}
+		Mesh->UpdateMeshSection_LinearColor(0, Vertices, Normals, UVs,
+			TArray<FLinearColor>(), TArray<FProcMeshTangent>());
 	}
-	Mesh->UpdateMeshSection_LinearColor(0, Vertices, Normals, UVs,
-		TArray<FLinearColor>(), TArray<FProcMeshTangent>());
 
 	// Fish: lazy loops just under the surface, occasionally breaching.
 	for (int32 i = 0; i < Fish.Num(); ++i)

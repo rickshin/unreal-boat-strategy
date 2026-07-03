@@ -10,6 +10,10 @@ class AProjectileActor;
 class AOceanActor;
 class AIslandActor;
 class ANodeDecorActor;
+class AWaterZone;
+class AWaterBody;
+class UWaterBodyComponent;
+class UNiagaraSystem;
 
 struct FACAlert
 {
@@ -48,10 +52,15 @@ public:
 
 	const TArray<FACAlert>& Alerts() const { return ActiveAlerts; }
 
+	// Water surface at a world XY: Epic Water plugin waves when active,
+	// otherwise the classic procedural wave function. Render-only.
+	void SampleOceanSurface(const FVector2D& XY, float WorldTime, FVector& OutLocation, FVector& OutNormal) const;
+
 private:
 	void StartMatch(uint64 Seed);
 	void TearDownMatch();
 	void SpawnEnvironment();
+	bool TrySpawnPluginOcean();
 	void SyncEntityActors();
 	void UpdateVisuals();
 	void DrainSimEvents();
@@ -69,7 +78,15 @@ private:
 	TMap<FEntityId, AProjectileActor*> ProjectileActorMap;
 	TArray<AProjectileActor*> ProjectilePool;
 	AOceanActor* Ocean = nullptr;
+	AWaterZone* WaterZone = nullptr;
+	AWaterBody* PluginOcean = nullptr;
+	UWaterBodyComponent* PluginOceanComp = nullptr;
+	bool bClassicOcean = false;               // -ClassicOcean disables the Water plugin sea
+	float AutoShotAt = -1.f;                  // -AutoShotAt=N saves a screenshot N seconds in
 	TArray<AActor*> WorldActors;              // islands, node decor, environment
 	TArray<ANodeDecorActor*> NodeDecors;
 	TArray<FACAlert> ActiveAlerts;
+
+	UPROPERTY()
+	TObjectPtr<UNiagaraSystem> SplashFX;      // water-impact foam burst
 };

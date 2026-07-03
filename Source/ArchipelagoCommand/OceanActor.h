@@ -20,7 +20,9 @@ public:
 	AOceanActor();
 
 	// SizeCells: sim map dimension; the sheet extends a margin beyond it.
-	void Build(int32 SizeCells);
+	// bShowWaterSheet=false keeps only the fish (used when the Epic Water
+	// plugin renders the sea; WaveHeight stays available as a fallback).
+	void Build(int32 SizeCells, bool bShowWaterSheet = true);
 
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -39,6 +41,7 @@ private:
 	TArray<FVector> Vertices;
 	TArray<FVector> Normals;
 	TArray<FVector2D> UVs;
+	bool bSheetVisible = true;
 	int32 GridVerts = 0;
 	float SheetOrigin = 0.f;
 	float SheetStep = 0.f;

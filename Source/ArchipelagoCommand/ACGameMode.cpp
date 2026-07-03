@@ -15,6 +15,19 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
+#include "WaterZoneActor.h"
+#include "WaterBodyOceanActor.h"
+#include "WaterBodyOceanComponent.h"
+#include "WaterBodyComponent.h"
+#include "WaterSplineComponent.h"
+#include "WaterWaves.h"
+#include "WaterTerrainComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
+#include "UnrealClient.h"
+#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogACGame, Log, All);
 
@@ -55,6 +68,15 @@ void AACGameMode::BeginPlay()
 		else if (DiffStr.Equals(TEXT("hard"), ESearchCase::IgnoreCase)) { Difficulty = ESimDifficulty::Hard; }
 	}
 	bSpectate = FParse::Param(CmdLine, TEXT("Spectate"));
+	bClassicOcean = FParse::Param(CmdLine, TEXT("ClassicOcean"));
+	FParse::Value(CmdLine, TEXT("AutoShotAt="), AutoShotAt);
+
+	SplashFX = LoadObject<UNiagaraSystem>(nullptr,
+		TEXT("/Niagara/DefaultAssets/Templates/Systems/DirectionalBurst.DirectionalBurst"));
+	if (!SplashFX)
+	{
+		UE_LOG(LogACGame, Warning, TEXT("Splash Niagara template not found; impacts will have no foam burst"));
+	}
 
 	SpawnEnvironment();
 	StartMatch(Seed);
@@ -71,7 +93,7 @@ void AACGameMode::SpawnEnvironment()
 	UDirectionalLightComponent* Sun = NewObject<UDirectionalLightComponent>(Env, TEXT("Sun"));
 	Sun->SetupAttachment(Root);
 	Sun->SetWorldRotation(FRotator(-48.f, 35.f, 0.f));
-	Sun->SetIntensity(7.f);
+	Sun->SetIntensity(3.f);
 	Sun->SetAtmosphereSunLight(true);
 	Sun->RegisterComponent();
 
@@ -82,12 +104,14 @@ void AACGameMode::SpawnEnvironment()
 	USkyLightComponent* Ambient = NewObject<USkyLightComponent>(Env, TEXT("SkyLight"));
 	Ambient->SetupAttachment(Root);
 	Ambient->bRealTimeCapture = true;
-	Ambient->SetIntensity(1.4f);
+	Ambient->SetIntensity(0.8f);
 	Ambient->RegisterComponent();
 
 	UExponentialHeightFogComponent* Fog = NewObject<UExponentialHeightFogComponent>(Env, TEXT("Fog"));
 	Fog->SetupAttachment(Root);
-	Fog->SetFogDensity(0.00004f);
+	// Keep haze subtle: at RTS camera distances a dense height fog washes
+	// the whole scene toward pastel blue.
+	Fog->SetFogDensity(0.000006f);
 	Fog->SetFogHeightFalloff(0.05f);
 	Fog->RegisterComponent();
 }
@@ -109,10 +133,15 @@ void AACGameMode::StartMatch(uint64 Seed)
 		SimGame->Players[P].bIsAI = bSpectate || (P != LocalPlayer());
 	}
 
-	// 3D world: ocean sheet, islands, resource decorations.
+	// 3D world: Epic Water plugin sea when available (classic procedural
+	// sheet as fallback), then islands and resource decorations. The
+	// AOceanActor always spawns: it owns the fish and the fallback waves.
+	const bool bPluginSea = !bClassicOcean && TrySpawnPluginOcean();
 	Ocean = GetWorld()->SpawnActor<AOceanActor>();
-	Ocean->Build(SimGame->Map.Width);
+	Ocean->Build(SimGame->Map.Width, !bPluginSea);
 	WorldActors.Add(Ocean);
+	UE_LOG(LogACGame, Log, TEXT("Ocean renderer: %s"),
+		bPluginSea ? TEXT("Epic Water plugin") : TEXT("classic procedural"));
 
 	for (const FSimIsland& Island : SimGame->Map.Islands)
 	{
@@ -147,6 +176,135 @@ void AACGameMode::StartMatch(uint64 Seed)
 	UE_LOG(LogACGame, Log, TEXT("Match started: seed %llu, hash %llu"), Seed, SimGame->StateHash());
 }
 
+bool AACGameMode::TrySpawnPluginOcean()
+{
+#if !WITH_EDITOR
+	// The water body info meshes can only be built by the editor-side mesh
+	// builder; packaged builds use the classic procedural sea instead.
+	return false;
+#else
+	// Mirror what the editor's water actor factory assigns on placement:
+	// ocean surface material, underwater post-process, Gerstner wave asset.
+	UMaterialInterface* OceanMat = LoadObject<UMaterialInterface>(nullptr,
+		TEXT("/Water/Materials/WaterSurface/Water_Material_Ocean.Water_Material_Ocean"));
+	UMaterialInterface* UnderwaterMat = LoadObject<UMaterialInterface>(nullptr,
+		TEXT("/Water/Materials/PostProcessing/M_UnderWater_PostProcess_Volume.M_UnderWater_PostProcess_Volume"));
+	UWaterWavesAsset* WavesAsset = LoadObject<UWaterWavesAsset>(nullptr,
+		TEXT("/Water/Waves/GerstnerWaves_Ocean.GerstnerWaves_Ocean"));
+	if (!OceanMat || !WavesAsset)
+	{
+		UE_LOG(LogACGame, Warning, TEXT("Water plugin content unavailable; using classic ocean"));
+		return false;
+	}
+
+	const float MapSize = SimGame->Map.Width * AC_CELL;
+	const FVector Center(MapSize * 0.5f, MapSize * 0.5f, AC_SEA_LEVEL);
+
+	WaterZone = GetWorld()->SpawnActor<AWaterZone>(AWaterZone::StaticClass(), Center, FRotator::ZeroRotator);
+	AWaterBodyOcean* OceanBody =
+		GetWorld()->SpawnActor<AWaterBodyOcean>(AWaterBodyOcean::StaticClass(), Center, FRotator::ZeroRotator);
+	if (!WaterZone || !OceanBody)
+	{
+		UE_LOG(LogACGame, Warning, TEXT("Water plugin actors failed to spawn; using classic ocean"));
+		if (WaterZone) { WaterZone->Destroy(); WaterZone = nullptr; }
+		if (OceanBody) { OceanBody->Destroy(); }
+		return false;
+	}
+	WaterZone->SetZoneExtent(FVector2D(MapSize * 2.f, MapSize * 2.f));
+
+	UWaterWavesAssetReference* WavesRef = NewObject<UWaterWavesAssetReference>(OceanBody);
+	WavesRef->SetWaterWavesAsset(WavesAsset);
+	OceanBody->SetWaterWaves(WavesRef);
+
+	UWaterBodyComponent* Comp = OceanBody->GetWaterBodyComponent();
+	Comp->SetWaterAndUnderWaterPostProcessMaterial(OceanMat, UnderwaterMat);
+
+	// An ocean body needs a closed spline, but the polygon marks LAND (the
+	// hole in the ocean; see FWaterQuadTree::AddOceanRecursive) — water
+	// fills the zone outside it. Park a tiny triangle under the first home
+	// island so effectively the whole zone is water.
+	if (UWaterSplineComponent* Spline = Comp->GetWaterSpline())
+	{
+		const FVector2D IslandW = SimToWorld2D(
+			SimGame->Map.Islands[SimGame->Map.HomeIsland[0]].Center);
+		const FVector Rel(IslandW.X - Center.X, IslandW.Y - Center.Y, 0.0);
+		Spline->ResetSpline({
+			Rel + FVector(900, 0, 0),
+			Rel + FVector(-450, 780, 0),
+			Rel + FVector(-450, -780, 0) });
+	}
+	if (UWaterBodyOceanComponent* OceanComp = Cast<UWaterBodyOceanComponent>(Comp))
+	{
+		OceanComp->SetOceanExtent(FVector2D(MapSize * 2.f, MapSize * 2.f));
+		OceanComp->SetCollisionExtents(FVector(MapSize, MapSize, 800.f));
+	}
+
+	// Seabed: Epic's water derives its color and opacity from water depth
+	// (water info texture = ground vs surface), so the sea needs a floor.
+	// A big sandy plane below sea level, registered as water terrain.
+	{
+		AActor* Seabed = GetWorld()->SpawnActor<AActor>();
+		UStaticMeshComponent* Floor = NewObject<UStaticMeshComponent>(Seabed, TEXT("SeabedMesh"));
+		Seabed->SetRootComponent(Floor);
+		Floor->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")));
+		UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, AC_MAT_BASIC);
+		if (Base)
+		{
+			UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Base, Seabed);
+			MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.045f, 0.075f, 0.07f));
+			Floor->SetMaterial(0, MID);
+		}
+		Floor->SetWorldLocationAndRotation(FVector(Center.X, Center.Y, -1600.f), FRotator::ZeroRotator);
+		Floor->SetWorldScale3D(FVector(MapSize * 2.f / 100.f, MapSize * 2.f / 100.f, 1.f));
+		Floor->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Floor->RegisterComponent();
+		UWaterTerrainComponent* Terrain = NewObject<UWaterTerrainComponent>(Seabed);
+		Terrain->RegisterComponent();
+		WorldActors.Add(Seabed);
+	}
+
+	// The water mesh quadtree skips any body without built info meshes, and
+	// those are normally built in the editor and saved with the level. For a
+	// runtime-spawned ocean we must build them ourselves: Movable mobility
+	// (dynamic data changes are blocked for registered Static components),
+	// then an explicit render-data rebuild.
+	Comp->SetMobility(EComponentMobility::Movable);
+	Comp->UpdateWaterBodyRenderData();
+
+	// Force a full rebuild now that shape, waves and materials are set.
+	FOnWaterBodyChangedParams ChangedParams;
+	ChangedParams.bShapeOrPositionChanged = true;
+	ChangedParams.bUserTriggered = true;
+	Comp->UpdateAll(ChangedParams);
+
+	PluginOcean = OceanBody;
+	PluginOceanComp = Comp;
+	WorldActors.Add(WaterZone);
+	WorldActors.Add(OceanBody);
+	return true;
+#endif // WITH_EDITOR
+}
+
+void AACGameMode::SampleOceanSurface(const FVector2D& XY, float WorldTime, FVector& OutLocation, FVector& OutNormal) const
+{
+	if (PluginOceanComp)
+	{
+		auto Result = PluginOceanComp->TryQueryWaterInfoClosestToWorldLocation(
+			FVector(XY.X, XY.Y, AC_SEA_LEVEL),
+			EWaterBodyQueryFlags::ComputeLocation | EWaterBodyQueryFlags::ComputeNormal
+			| EWaterBodyQueryFlags::IncludeWaves);
+		if (Result.HasValue())
+		{
+			OutLocation = Result.GetValue().GetWaterSurfaceLocation();
+			OutNormal = Result.GetValue().GetWaterSurfaceNormal();
+			return;
+		}
+	}
+	OutLocation = FVector(XY.X, XY.Y, AOceanActor::WaveHeight(XY, WorldTime));
+	const FVector2D Grad = AOceanActor::WaveGradient(XY, WorldTime);
+	OutNormal = FVector(-Grad.X, -Grad.Y, 1.f).GetSafeNormal();
+}
+
 void AACGameMode::TearDownMatch()
 {
 	for (auto& Pair : EntityActorMap) { if (Pair.Value) { Pair.Value->Destroy(); } }
@@ -159,6 +317,9 @@ void AACGameMode::TearDownMatch()
 	WorldActors.Reset();
 	NodeDecors.Reset();
 	Ocean = nullptr;
+	WaterZone = nullptr;
+	PluginOcean = nullptr;
+	PluginOceanComp = nullptr;
 	ActiveAlerts.Reset();
 	Accumulator = 0.f;
 	SimGame.Reset();
@@ -201,6 +362,14 @@ void AACGameMode::Tick(float DeltaSeconds)
 
 	const double Now = GetWorld()->GetTimeSeconds();
 	ActiveAlerts.RemoveAll([Now](const FACAlert& A) { return Now > A.Expiry; });
+
+	// Debug capture for automated visual checks (-AutoShotAt=N).
+	if (AutoShotAt > 0.f && Now >= AutoShotAt)
+	{
+		AutoShotAt = -1.f;
+		FScreenshotRequest::RequestScreenshot(TEXT("AutoShot.png"), true, false);
+		UE_LOG(LogACGame, Log, TEXT("Auto screenshot requested"));
+	}
 }
 
 void AACGameMode::SyncEntityActors()
@@ -296,8 +465,23 @@ void AACGameMode::UpdateVisuals()
 void AACGameMode::DrainSimEvents()
 {
 	const double Now = GetWorld()->GetTimeSeconds();
+	int32 SplashBudget = 8;   // cap FX spawned per drain so big battles stay smooth
 	for (const FSimEvent& E : SimGame->Events)
 	{
+		if (E.Kind == FSimEvent::EKind::Splash)
+		{
+			const bool bSeen = bSpectate || E.Player == LocalPlayer()
+				|| SimGame->IsVisibleTo(LocalPlayer(), E.Pos);
+			if (SplashFX && bSeen && SplashBudget-- > 0)
+			{
+				const FVector2D XY = SimToWorld2D(E.Pos);
+				FVector Loc, Normal;
+				SampleOceanSurface(XY, float(Now), Loc, Normal);
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SplashFX,
+					Loc, FRotator(90.f, 0.f, 0.f), FVector(1.5f), true);
+			}
+			continue;
+		}
 		// Only surface the local player's alerts (victory is for everyone).
 		if (E.Kind == FSimEvent::EKind::Victory || E.Player == LocalPlayer() || bSpectate)
 		{

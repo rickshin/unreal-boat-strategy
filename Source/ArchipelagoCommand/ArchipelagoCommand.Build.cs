@@ -13,7 +13,9 @@ public class ArchipelagoCommand : ModuleRules
 			"Engine",
 			"InputCore",
 			"ProceduralMeshComponent",
-			"Json"
+			"Json",
+			"Water",
+			"Niagara"
 		});
 	}
 }

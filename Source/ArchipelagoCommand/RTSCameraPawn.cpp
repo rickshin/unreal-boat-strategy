@@ -9,6 +9,12 @@ ARTSCameraPawn::ARTSCameraPawn()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(Root);
 	Camera->SetFieldOfView(55.f);
+	// Pin auto exposure: metering a scene that is mostly dark sea pushes
+	// the exposure way up and blows out boats and islands to near-white.
+	Camera->PostProcessSettings.bOverride_AutoExposureMinBrightness = true;
+	Camera->PostProcessSettings.AutoExposureMinBrightness = 1.f;
+	Camera->PostProcessSettings.bOverride_AutoExposureMaxBrightness = true;
+	Camera->PostProcessSettings.AutoExposureMaxBrightness = 1.f;
 	SetActorEnableCollision(false);
 }
 
@@ -22,7 +28,7 @@ void ARTSCameraPawn::Pan(const FVector2D& Direction, float DeltaSeconds)
 
 void ARTSCameraPawn::Zoom(float Steps)
 {
-	TargetHeight = FMath::Clamp(TargetHeight * FMath::Pow(1.18f, Steps), 3500.f, 42000.f);
+	TargetHeight = FMath::Clamp(TargetHeight * FMath::Pow(1.18f, Steps), 1500.f, 42000.f);
 }
 
 void ARTSCameraPawn::JumpTo(const FVector2D& WorldXY)

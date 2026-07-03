@@ -62,4 +62,5 @@ private:
 	ARTSHUD* GetRTSHUD() const;
 
 	FVector2D CameraAxis = FVector2D::ZeroVector;
+	bool bEdgeScroll = true;   // -NoEdgeScroll disables (automated captures)
 };

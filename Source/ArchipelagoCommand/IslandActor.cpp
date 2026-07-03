@@ -2,6 +2,7 @@
 #include "ACTypes.h"
 #include "Sim/SimMap.h"
 #include "ProceduralMeshComponent.h"
+#include "WaterTerrainComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -143,6 +144,12 @@ void AIslandActor::Build(const FSimMap& Map, const FSimIsland& Island)
 
 	Mesh->CreateMeshSection_LinearColor(0, Verts, Tris, Normals, UVs,
 		TArray<FLinearColor>(), TArray<FProcMeshTangent>(), false);
+
+	// Register with any Water plugin zone so the sea gets real shoreline
+	// depth blending around this island (inert without a water zone).
+	UWaterTerrainComponent* Terrain = NewObject<UWaterTerrainComponent>(this);
+	Terrain->RegisterComponent();
+
 	const FLinearColor GroundColor = Island.bVolcanic
 		? FLinearColor(0.16f, 0.13f, 0.11f)
 		: FLinearColor(0.16f, 0.30f, 0.12f);

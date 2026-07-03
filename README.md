@@ -213,11 +213,23 @@ original design document (§ numbers refer to it):
   pathfinding with cache + group moves (§12), fog of war with radar
   minimap (§13), three-layer AI (§14), HUD (§15), procedural symmetric
   maps (§16), HQ-kill victory (§17), fish + rock decorations exactly per
-  the §18 rules, 20 Hz determinism + state hash (§4, §19).
-- **Visuals:** stylized low-poly look built from code. To upgrade to
-  Epic's Water plugin (Niagara foam, underwater post-process), enable the
-  plugin and replace `AOceanActor` with a `WaterBodyOcean`; keep
-  `WaveHeight()` in sync with its material or flatten `BobDamp` to 0.
+  the §18 rules, 20 Hz determinism + state hash (§4, §19). 
+- **Views:** Allow the play to select a unit, press, v, an over the shoulder
+  view from the perspective of the unit. If they hit v again, overhead
+  view comes back.
+- **Visuals:** stylized low-poly props over **Epic's Water plugin ocean**
+  (done): a `WaterZone` + `WaterBodyOcean` are spawned from C++ at runtime
+  with the plugin's ocean material, Gerstner wave asset and underwater
+  post-process; islands and a generated seabed register as water terrain
+  for shoreline depth blending; boats query the real water surface
+  (`TryQueryWaterInfoClosestToWorldLocation`) so hulls ride the rendered
+  swell; projectile water impacts spawn Niagara foam bursts. Runtime
+  notes discovered the hard way: an ocean spline polygon marks *land*
+  (keep it tiny), water body info meshes must be rebuilt via
+  `UpdateWaterBodyRenderData()` after spawning (editor builds only —
+  packaged builds and `-ClassicOcean` fall back to the procedural
+  Gerstner sheet), and the sea needs a seabed or depth-based opacity
+  renders it invisible.
 - **Deferred (design hooks in place):** ship boarding/infantry (§11) —
   abstract resolution slots naturally into the Combat system; research
   queues (§15); optional victory modes (§17); save/load (§19) — the sim
@@ -228,3 +240,4 @@ original design document (§ numbers refer to it):
   fine at the spec's 50–100 units; if you push beyond, move wave
   displacement into a material WPO and add a spatial grid to Combat
   targeting (Movement already has one).
+

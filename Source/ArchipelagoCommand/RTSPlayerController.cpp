@@ -8,6 +8,8 @@
 #include "Engine/World.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/PlayerInput.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 DECLARE_DELEGATE_OneParam(FHotkeyDelegate, int32);
 
@@ -16,6 +18,7 @@ ARTSPlayerController::ARTSPlayerController()
 	bShowMouseCursor = true;
 	bEnableClickEvents = false;
 	bEnableMouseOverEvents = false;
+	bEdgeScroll = !FParse::Param(FCommandLine::Get(), TEXT("NoEdgeScroll"));
 }
 
 AACGameMode* ARTSPlayerController::GM() const
@@ -78,7 +81,7 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 	float MX, MY;
 	int32 VW, VH;
 	GetViewportSize(VW, VH);
-	if (GetMousePosition(MX, MY) && VW > 0 && VH > 0)
+	if (bEdgeScroll && GetMousePosition(MX, MY) && VW > 0 && VH > 0)
 	{
 		const float Edge = 14.f;
 		if (MX <= Edge) { Pan.Y -= 1.f; }             // screen left = -world Y

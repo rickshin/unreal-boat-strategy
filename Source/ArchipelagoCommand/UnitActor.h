@@ -7,6 +7,7 @@
 
 class UProceduralMeshComponent;
 class UStaticMeshComponent;
+class AACGameMode;
 struct FSimGame;
 
 // Visual proxy for one sim entity (ship, aircraft or structure). Reads sim
@@ -53,6 +54,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UStaticMeshComponent> SelectionRing;
 
+	AACGameMode* GM = nullptr;   // cached for water-surface queries
 	FVector2f PrevPos = FVector2f::ZeroVector;
 	FVector2f CurrPos = FVector2f::ZeroVector;
 	float PrevFacing = 0.f;
@@ -83,6 +85,7 @@ private:
 
 	EWeaponType WeaponType = EWeaponType::Shell;
 	bool bJustInit = true;
+	AACGameMode* GM = nullptr;
 	FVector2f PrevPos = FVector2f::ZeroVector;
 	FVector2f CurrPos = FVector2f::ZeroVector;
 };

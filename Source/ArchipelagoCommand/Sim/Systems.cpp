@@ -546,6 +546,11 @@ void SimSys::RunCombat(FSimGame& G)
 			{
 				G.ApplyDamage(P.Target, P.Damage, P.Type, P.SourcePlayer);
 			}
+			// Surface impacts cue a foam splash (AA bursts pop in the air).
+			if (P.Type != EWeaponType::AA)
+			{
+				G.PushEvent(FSimEvent::EKind::Splash, P.SourcePlayer, P.P, FString());
+			}
 			G.World.Destroy(Eid);
 			continue;
 		}

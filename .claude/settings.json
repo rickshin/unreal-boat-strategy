@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 75 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=20 -NoEdgeScroll)",
+      "Bash(timeout 75 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=20 -NoEdgeScroll '-ExecCmds=ShowFlag.Wireframe 1')"
+    ]
+  }
+}
