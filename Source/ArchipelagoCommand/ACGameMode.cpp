@@ -224,6 +224,7 @@ void AACGameMode::SpawnEnvironment()
 	// …and crepuscular shafts through cloud gaps via volumetric fog.
 	Sun->SetVolumetricScatteringIntensity(2.f);
 	Sun->RegisterComponent();
+	SunLight = Sun;
 
 	USkyAtmosphereComponent* Sky = NewObject<USkyAtmosphereComponent>(Env, TEXT("SkyAtmosphere"));
 	Sky->SetupAttachment(Root);
@@ -275,6 +276,8 @@ void AACGameMode::StartMatch(uint64 Seed)
 	{
 		SimGame->Players[P].bIsAI = bSpectate || (P != LocalPlayer());
 	}
+
+	ApplyTimeOfDay(Seed);
 
 	// 3D world: Epic Water plugin sea when available (classic procedural
 	// sheet as fallback), then islands and resource decorations. The
@@ -340,6 +343,22 @@ void AACGameMode::StartMatch(uint64 Seed)
 	{
 		UE_LOG(LogACGame, Verbose, TEXT("  geyser %d at (%d,%d)"), N.Id, N.Cell.X, N.Cell.Y);
 	}
+}
+
+void AACGameMode::ApplyTimeOfDay(uint64 Seed)
+{
+	// Every seed fights at its own hour: sun elevation and azimuth derive
+	// from the seed (render-only randomness — the sim never sees it; the
+	// state hash is identical whatever the light does). Elevation is
+	// square-root biased toward midday, with occasional low golden-hour
+	// suns; the sky atmosphere tints a low sun warm automatically.
+	if (!SunLight) { return; }
+	FRandomStream Rng(int32(Seed % 0x7fffffff));
+	const float Elevation = 18.f + 52.f * FMath::Sqrt(Rng.FRand());
+	const float Azimuth = Rng.FRandRange(0.f, 360.f);
+	SunLight->SetWorldRotation(FRotator(-Elevation, Azimuth, 0.f));
+	UE_LOG(LogACGame, Log, TEXT("Time of day: sun elevation %.0f deg, azimuth %.0f deg%s"),
+		Elevation, Azimuth, Elevation < 28.f ? TEXT(" (golden hour)") : TEXT(""));
 }
 
 bool AACGameMode::TrySpawnPluginOcean()

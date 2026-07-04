@@ -16,6 +16,7 @@ class UWaterBodyComponent;
 class UNiagaraSystem;
 class UAudioComponent;
 class USoundWaveProcedural;
+class UDirectionalLightComponent;
 
 struct FACAlert
 {
@@ -62,6 +63,7 @@ private:
 	void StartMatch(uint64 Seed);
 	void TearDownMatch();
 	void SpawnEnvironment();
+	void ApplyTimeOfDay(uint64 Seed);
 	bool TrySpawnPluginOcean();
 	void SyncEntityActors();
 	void UpdateVisuals();
@@ -93,6 +95,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UNiagaraSystem> SplashFX;      // water-impact foam burst
+
+	UPROPERTY()
+	TObjectPtr<UDirectionalLightComponent> SunLight;   // re-aimed per seed
 
 	// Soundtrack: mp3s from Audio/soundtrack/, shuffled, decoded off-thread
 	// (-NoMusic disables, -MusicVolume=0..1 adjusts).

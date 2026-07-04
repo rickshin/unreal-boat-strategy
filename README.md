@@ -272,7 +272,9 @@ original design document (§ numbers refer to it):
     RTS fake — a slow-scrolling translucent shadow layer guaranteeing
     drifting darkness regardless of real cloud cover; god rays +
     volumetric fog (flags on the sun/fog components we already spawn);
-    per-seed time-of-day (derive sun angle/color from the map seed);
+    per-seed time-of-day (**done** — sun
+    elevation/azimuth derive from the seed, midday-biased with rare
+    golden hours; the atmosphere tints low suns warm automatically);
     post polish (TAA→TSR, bloom tuned for the KiTrin glow, lens flares).
   - *Tier 2 — gameplay-adjacent VFX, ~a day each:* battle feedback pass
     (boat wakes, smoke on damaged units, real sinking animations,
