@@ -18,6 +18,7 @@
     "patrol_boat": {
       "name": "Patrol Boat", "class": "naval", "hp": 260, "armor": 2,
       "speed": 3.4, "vision": 8, "cost": 65, "buildTime": 10,
+      "fireSound": "patrol-boat-cannon",
       "weapons": [
         { "type": "shell", "damage": 10, "range": 5.5, "reload": 1.0, "projSpeed": 15 }
       ]

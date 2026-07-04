@@ -132,6 +132,7 @@ bool FContentDB::LoadFromDir(const FString& Dir)
 			if (U->HasField(TEXT("crawler"))) { T.CrawlerId = FName(*U->GetStringField(TEXT("crawler"))); }
 			T.GasCapacity = U->HasField(TEXT("gasCapacity")) ? U->GetNumberField(TEXT("gasCapacity")) : 100.0;
 			T.DockTime = U->HasField(TEXT("dockTime")) ? U->GetNumberField(TEXT("dockTime")) : 10.0;
+			T.FireSound = U->HasField(TEXT("fireSound")) ? U->GetStringField(TEXT("fireSound")) : FString();
 			T.Weapons = ParseWeapons(U);
 			T.Builds = ParseNameArray(U, TEXT("builds"));
 			F.Units.Add(T.Id, T);
@@ -150,6 +151,7 @@ bool FContentDB::LoadFromDir(const FString& Dir)
 			T.Vision = S->HasField(TEXT("vision")) ? S->GetNumberField(TEXT("vision")) : 8.0;
 			T.BuildTime = S->GetNumberField(TEXT("buildTime"));
 			T.Cost = ParseCost(S);
+			T.FireSound = S->HasField(TEXT("fireSound")) ? S->GetStringField(TEXT("fireSound")) : FString();
 			T.Weapons = ParseWeapons(S);
 			T.Produces = ParseNameArray(S, TEXT("produces"));
 			F.Structures.Add(T.Id, T);

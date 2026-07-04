@@ -45,6 +45,7 @@ struct FUnitTpl
 	FName CrawlerId;          // harvester: crawler unit it deploys
 	float GasCapacity = 100.f;// harvester: KiTrin per load
 	float DockTime = 10.f;    // harvester: seconds attached to the tube
+	FString FireSound;        // Audio/effects/<name>.mp3 on every shot (render-only)
 	TArray<FWeaponTpl> Weapons;
 	TArray<FName> Builds;     // builder: structure ids; carrier: aircraft ids
 	int32 Value() const { return Cost; }
@@ -60,6 +61,7 @@ struct FStructTpl
 	float Vision = 8.f;
 	int32 Cost = 0;           // KiTrin
 	float BuildTime = 15.f;
+	FString FireSound;        // Audio/effects/<name>.mp3 on every shot (render-only)
 	TArray<FName> Produces;   // unit ids
 	TArray<FWeaponTpl> Weapons;
 };

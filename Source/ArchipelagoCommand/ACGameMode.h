@@ -112,6 +112,13 @@ private:
 	bool bMusicEnabled = true;
 	bool bMusicDecoding = false;
 
+	// One-shot effects (Audio/effects/<name>.mp3): decoded once into a
+	// cache, played spatialized at the event location.
+	void PlayEffectSound(const FString& Name, const FVector2f& SimPos);
+	TMap<FString, TSharedPtr<struct FDecodedMusic>> SfxCache;
+	UPROPERTY()
+	TObjectPtr<class USoundAttenuation> SfxAttenuation;
+
 	// Ambient bed: Audio/ambient/ocean-peaceful.mp3 looped by re-queueing
 	// the decoded PCM before the buffer drains (-NoAmbient disables).
 	void StartAmbient();

@@ -27,6 +27,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "MusicDecoder.h"
 #include "Sound/SoundWaveProcedural.h"
+#include "Sound/SoundAttenuation.h"
 #include "Components/AudioComponent.h"
 #include "Async/Async.h"
 #include "HAL/FileManager.h"
@@ -93,6 +94,53 @@ void AACGameMode::BeginPlay()
 	StartMatch(Seed);
 	StartMusic();
 	StartAmbient();
+}
+
+void AACGameMode::PlayEffectSound(const FString& Name, const FVector2f& SimPos)
+{
+	if (Name.IsEmpty()) { return; }
+
+	// Decode once, cache forever (effects are short clips).
+	TSharedPtr<FDecodedMusic>* Cached = SfxCache.Find(Name);
+	if (!Cached)
+	{
+		TSharedPtr<FDecodedMusic> Decoded = MakeShared<FDecodedMusic>();
+		const FString Path = FPaths::ProjectDir() / TEXT("Audio/effects") / Name + TEXT(".mp3");
+		if (!DecodeMp3File(Path, *Decoded))
+		{
+			UE_LOG(LogACGame, Warning, TEXT("Effect sound missing: %s"), *Path);
+			Decoded->PCM.Reset();   // cache the failure so we warn once
+		}
+		Cached = &SfxCache.Add(Name, Decoded);
+	}
+	if (!(*Cached).IsValid() || (*Cached)->PCM.Num() == 0) { return; }
+
+	// Lazily build one shared spatial attenuation (inner radius ~10 cells,
+	// audible out to about half the map).
+	if (!SfxAttenuation)
+	{
+		SfxAttenuation = NewObject<USoundAttenuation>(this);
+		SfxAttenuation->Attenuation.bAttenuate = true;
+		SfxAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+		SfxAttenuation->Attenuation.AttenuationShapeExtents = FVector(6000.f, 0.f, 0.f);
+		SfxAttenuation->Attenuation.FalloffDistance = 42000.f;
+	}
+
+	// A fresh procedural wave per play: they are single-consumer queues,
+	// so overlapping shots each need their own.
+	const FDecodedMusic& Fx = **Cached;
+	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(this);
+	Wave->SetSampleRate(Fx.SampleRate);
+	Wave->NumChannels = Fx.Channels;
+	Wave->Duration = Fx.Duration;
+	Wave->QueueAudio(Fx.PCM.GetData(), Fx.PCM.Num());
+
+	const FVector2D XY = SimToWorld2D(SimPos);
+	UGameplayStatics::SpawnSoundAtLocation(GetWorld(), Wave,
+		FVector(XY.X, XY.Y, AC_SEA_LEVEL + 150.f), FRotator::ZeroRotator,
+		0.8f, FMath::FRandRange(0.94f, 1.06f),   // slight pitch variance
+		0.f, SfxAttenuation);
+	UE_LOG(LogACGame, Verbose, TEXT("Played effect: %s"), *Name);
 }
 
 void AACGameMode::StartAmbient()
@@ -676,8 +724,23 @@ void AACGameMode::DrainSimEvents()
 {
 	const double Now = GetWorld()->GetTimeSeconds();
 	int32 SplashBudget = 8;   // cap FX spawned per drain so big battles stay smooth
+	int32 ShotBudget = 10;
 	for (const FSimEvent& E : SimGame->Events)
 	{
+		if (E.Kind == FSimEvent::EKind::Shot)
+		{
+			const bool bSeen = bSpectate || E.Player == LocalPlayer()
+				|| SimGame->IsVisibleTo(LocalPlayer(), E.Pos);
+			if (bSeen && ShotBudget-- > 0)
+			{
+				// Data-driven: the firing template names its sound in JSON.
+				const FName Faction = SimGame->Players[E.Player].FactionId;
+				const FUnitTpl* UT = SimGame->Content.Unit(Faction, E.Tpl);
+				const FStructTpl* ST = UT ? nullptr : SimGame->Content.Structure(Faction, E.Tpl);
+				PlayEffectSound(UT ? UT->FireSound : ST ? ST->FireSound : FString(), E.Pos);
+			}
+			continue;
+		}
 		if (E.Kind == FSimEvent::EKind::Splash)
 		{
 			const bool bSeen = bSpectate || E.Player == LocalPlayer()

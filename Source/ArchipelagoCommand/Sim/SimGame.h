@@ -210,12 +210,13 @@ struct FSimPlayer
 
 struct FSimEvent
 {
-	// Splash is a render-only cue (projectile water impact); it never
-	// feeds back into the sim.
-	enum class EKind : uint8 { UnderAttack, UnitLost, ProductionDone, Victory, Splash } Kind;
+	// Splash and Shot are render-only cues (impacts and muzzle reports);
+	// they never feed back into the sim.
+	enum class EKind : uint8 { UnderAttack, UnitLost, ProductionDone, Victory, Splash, Shot } Kind;
 	int32 Player = -1;
 	FVector2f Pos = FVector2f::ZeroVector;
 	FString Text;
+	FName Tpl;          // Shot/UnitLost: template of the entity involved
 };
 
 struct FSimGame
@@ -259,8 +260,9 @@ struct FSimGame
 	// 60%, reduced by weapon armor pierce.
 	void ApplyDamage(FEntityId Target, float Damage, EWeaponType Type, int32 SourcePlayer);
 
-	void PushEvent(FSimEvent::EKind Kind, int32 Player, const FVector2f& Pos, const FString& Text)
+	void PushEvent(FSimEvent::EKind Kind, int32 Player, const FVector2f& Pos, const FString& Text,
+		FName Tpl = NAME_None)
 	{
-		Events.Add({ Kind, Player, Pos, Text });
+		Events.Add({ Kind, Player, Pos, Text, Tpl });
 	}
 };

@@ -92,6 +92,15 @@ namespace
 			}
 		}
 	}
+
+	// Render-only muzzle-report cue for the firing entity.
+	void PushShotEvent(FSimGame& G, FEntityId Shooter, int32 Player, const FVector2f& At)
+	{
+		FName Tpl;
+		if (const FUnitC* U = G.World.Unit.Find(Shooter)) { Tpl = U->Tpl; }
+		else if (const FStructC* SC = G.World.Struct.Find(Shooter)) { Tpl = SC->Tpl; }
+		G.PushEvent(FSimEvent::EKind::Shot, Player, At, FString(), Tpl);
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -752,6 +761,7 @@ void SimSys::RunCombat(FSimGame& G)
 				PC.Type = W.Type;
 				PC.SourcePlayer = Player;
 				G.World.Proj.Add(ProjId, PC);
+				PushShotEvent(G, Eid, Player, P->P);
 				const float ReloadMult = (C.DisruptTicks > 0) ? 1.6f : 1.f;
 				C.State[Wi].CooldownTicks =
 					FMath::Max(1, FMath::RoundToInt32(W.Reload * ReloadMult * SIM_TICKS_PER_SEC));
@@ -807,6 +817,7 @@ void SimSys::RunCombat(FSimGame& G)
 			PC.Type = W.Type;
 			PC.SourcePlayer = Player;
 			G.World.Proj.Add(Proj, PC);
+			PushShotEvent(G, Eid, Player, P->P);
 
 			const float ReloadMult = (C.DisruptTicks > 0) ? 1.6f : 1.f;
 			C.State[Wi].CooldownTicks = FMath::Max(1, FMath::RoundToInt32(W.Reload * ReloadMult * SIM_TICKS_PER_SEC));
