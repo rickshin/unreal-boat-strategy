@@ -354,7 +354,9 @@ void AACGameMode::ApplyTimeOfDay(uint64 Seed)
 	// suns; the sky atmosphere tints a low sun warm automatically.
 	if (!SunLight) { return; }
 	FRandomStream Rng(int32(Seed % 0x7fffffff));
-	const float Elevation = 18.f + 52.f * FMath::Sqrt(Rng.FRand());
+	// Pow 0.7 spreads the hours wider than Sqrt did: golden light stops
+	// being a 4% rarity while noon stays the norm.
+	const float Elevation = 15.f + 55.f * FMath::Pow(Rng.FRand(), 0.7f);
 	const float Azimuth = Rng.FRandRange(0.f, 360.f);
 	SunLight->SetWorldRotation(FRotator(-Elevation, Azimuth, 0.f));
 	UE_LOG(LogACGame, Log, TEXT("Time of day: sun elevation %.0f deg, azimuth %.0f deg%s"),

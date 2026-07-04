@@ -254,6 +254,17 @@ uint64 FSimGame::StateHash() const
 	{
 		H.AddF(Players[P].KiTrin);
 	}
+	// Map state matters too: geyser reserves and island ownership are as
+	// much "the game" as entity positions.
+	for (const FSimResourceNode& N : Map.Nodes)
+	{
+		H.Add(uint64(uint32(N.Cell.X)) << 32 | uint32(N.Cell.Y));
+		H.AddF(N.Amount);
+	}
+	for (const FSimIsland& Isl : Map.Islands)
+	{
+		H.Add(uint64(Isl.OwnerPlayer + 1));
+	}
 	TArray<FEntityId> Ids = World.Alive.Array();
 	Ids.Sort();
 	for (const FEntityId Id : Ids)

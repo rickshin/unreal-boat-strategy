@@ -93,20 +93,27 @@ void FSimMap::Generate(uint64 Seed)
 		return Islands.Num() - 1;
 	};
 
-	// Two home islands near opposite corners.
-	HomeIsland[0] = AddIsland(FVector2f(26.f, 26.f), 7.f, true);
-	HomeIsland[1] = AddIsland(FVector2f(Width - 26.f, Height - 26.f), 7.f, true);
+	// Two home islands on a mirrored pair of points: a random compass
+	// bearing per seed (still point-symmetric, so still fair), with a
+	// varied size — seeds should FEEL different from the first frame.
+	const FVector2f MapCenter(Width * 0.5f, Height * 0.5f);
+	const float HomeBearing = Rng.FRange(0.f, 2.f * PI);
+	const float HomeRadius = Rng.FRange(5.5f, 8.5f);
+	const FVector2f HomeOffset(FMath::Cos(HomeBearing) * 38.f, FMath::Sin(HomeBearing) * 38.f);
+	HomeIsland[0] = AddIsland(MapCenter - HomeOffset, HomeRadius, true);
+	HomeIsland[1] = AddIsland(MapCenter + HomeOffset, HomeRadius, true);
 
 	// Neutral islands: place in one half, mirror through the map center for
-	// point symmetry (fair starts for lockstep play).
-	const FVector2f MapCenter(Width * 0.5f, Height * 0.5f);
+	// point symmetry (fair starts for lockstep play). Count varies per seed
+	// from sparse open sea to a crowded archipelago.
+	const int32 WantPairs = Rng.RangeInt(4, 9);
 	int32 Placed = 0;
-	for (int32 Try = 0; Try < 200 && Placed < 6; ++Try)
+	for (int32 Try = 0; Try < 260 && Placed < WantPairs; ++Try)
 	{
 		const FVector2f C(Rng.FRange(14.f, Width - 14.f), Rng.FRange(14.f, Height - 14.f));
 		if ((C - MapCenter).SizeSquared() < 100.f) { continue; }           // keep center open sea
 		if (C.X + C.Y > Width) { continue; }                                // one half only
-		const float Radius = Rng.FRange(3.5f, 6.5f);
+		const float Radius = Rng.FRange(3.0f, 7.5f);
 		bool bClear = true;
 		for (const FSimIsland& I : Islands)
 		{
