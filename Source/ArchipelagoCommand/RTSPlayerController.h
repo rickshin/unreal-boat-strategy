@@ -72,6 +72,7 @@ private:
 	bool bFireHeld = false;    // Space held while in unit (follow) view
 	FEntityId PrevFollowed = INVALID_ENTITY;   // detects enter/exit for sim handover
 	bool bEdgeScroll = true;   // -NoEdgeScroll disables (automated captures)
+	bool bInputEnabled = true; // -NoInput disables all bindings (captures)
 
 public:
 	bool IsInUnitView() const;

@@ -12,6 +12,7 @@
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/SkyAtmosphereComponent.h"
+#include "Components/VolumetricCloudComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
@@ -215,11 +216,21 @@ void AACGameMode::SpawnEnvironment()
 	Sun->SetWorldRotation(FRotator(-48.f, 35.f, 0.f));
 	Sun->SetIntensity(3.f);
 	Sun->SetAtmosphereSunLight(true);
+	Sun->bCastCloudShadows = true;   // cloud shadows drift across the sea
 	Sun->RegisterComponent();
 
 	USkyAtmosphereComponent* Sky = NewObject<USkyAtmosphereComponent>(Env, TEXT("SkyAtmosphere"));
 	Sky->SetupAttachment(Root);
 	Sky->RegisterComponent();
+
+	// Volumetric clouds: the component ships with a default cloud material,
+	// so spawning it is enough. Visible on the horizon in unit view; from
+	// overhead you mostly see their shadows on the water. A lower deck
+	// makes both effects stronger at RTS scale.
+	UVolumetricCloudComponent* Clouds = NewObject<UVolumetricCloudComponent>(Env, TEXT("Clouds"));
+	Clouds->SetupAttachment(Root);
+	Clouds->SetLayerBottomAltitude(2.5f);   // km
+	Clouds->RegisterComponent();
 
 	USkyLightComponent* Ambient = NewObject<USkyLightComponent>(Env, TEXT("SkyLight"));
 	Ambient->SetupAttachment(Root);
@@ -302,7 +313,11 @@ void AACGameMode::StartMatch(uint64 Seed)
 			for (const FEntityId Eid : SimSortedKeys(SimGame->World.Unit))
 			{
 				const FOwnerC* O = SimGame->World.Own.Find(Eid);
-				if (O && O->Player == LocalPlayer()) { Cam->EnterFollow(Eid); break; }
+				if (!O || O->Player != LocalPlayer()) { continue; }
+				// Prefer a naval unit: its sea-level chase cam shows the sky.
+				if (SimGame->World.Unit[Eid].Domain != EUnitDomain::Naval) { continue; }
+				Cam->EnterFollow(Eid);
+				break;
 			}
 		}
 	}

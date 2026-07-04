@@ -264,7 +264,9 @@ original design document (§ numbers refer to it):
   renders it invisible.
 - **Graphics roadmap (options, in payoff-per-effort order):**
   - *Tier 1 — engine features, code-only, hours:* volumetric clouds
-    (`UVolumetricCloudComponent`, spawnable like our sky); god rays +
+    (**done** — spawned with a lowered 2.5 km deck and sun cloud-shadows;
+    visible in unit view and as drifting shadows when a cloud crosses
+    the map); god rays +
     volumetric fog (flags on the sun/fog components we already spawn);
     per-seed time-of-day (derive sun angle/color from the map seed);
     post polish (TAA→TSR, bloom tuned for the KiTrin glow, lens flares).

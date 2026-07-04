@@ -19,6 +19,7 @@ ARTSPlayerController::ARTSPlayerController()
 	bEnableClickEvents = false;
 	bEnableMouseOverEvents = false;
 	bEdgeScroll = !FParse::Param(FCommandLine::Get(), TEXT("NoEdgeScroll"));
+	bInputEnabled = !FParse::Param(FCommandLine::Get(), TEXT("NoInput"));
 }
 
 AACGameMode* ARTSPlayerController::GM() const
@@ -39,6 +40,8 @@ ARTSHUD* ARTSPlayerController::GetRTSHUD() const
 void ARTSPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+	// -NoInput: automated capture runs must be immune to stray input.
+	if (!bInputEnabled) { return; }
 	InputComponent->BindAction(TEXT("Select"), IE_Pressed, this, &ARTSPlayerController::OnSelectPressed);
 	InputComponent->BindAction(TEXT("Select"), IE_Released, this, &ARTSPlayerController::OnSelectReleased);
 	InputComponent->BindAction(TEXT("Command"), IE_Pressed, this, &ARTSPlayerController::OnCommandPressed);
