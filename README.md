@@ -266,7 +266,11 @@ original design document (§ numbers refer to it):
   - *Tier 1 — engine features, code-only, hours:* volumetric clouds
     (**done** — spawned with a lowered 2.5 km deck and sun cloud-shadows;
     visible in unit view and as drifting shadows when a cloud crosses
-    the map); god rays +
+    the map). Follow-ups for stronger overhead presence: a denser
+    overcast cloud material instance (small deliberate uasset
+    exception) so shadow patches cross the map often, or the classic
+    RTS fake — a slow-scrolling translucent shadow layer guaranteeing
+    drifting darkness regardless of real cloud cover; god rays +
     volumetric fog (flags on the sun/fog components we already spawn);
     per-seed time-of-day (derive sun angle/color from the map seed);
     post polish (TAA→TSR, bloom tuned for the KiTrin glow, lens flares).

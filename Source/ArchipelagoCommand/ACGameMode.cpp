@@ -217,6 +217,12 @@ void AACGameMode::SpawnEnvironment()
 	Sun->SetIntensity(3.f);
 	Sun->SetAtmosphereSunLight(true);
 	Sun->bCastCloudShadows = true;   // cloud shadows drift across the sea
+	// God rays: screen-space shafts when the sun is in view (unit view)…
+	Sun->bEnableLightShaftBloom = true;
+	Sun->bEnableLightShaftOcclusion = true;
+	Sun->BloomScale = 0.25f;
+	// …and crepuscular shafts through cloud gaps via volumetric fog.
+	Sun->SetVolumetricScatteringIntensity(2.f);
 	Sun->RegisterComponent();
 
 	USkyAtmosphereComponent* Sky = NewObject<USkyAtmosphereComponent>(Env, TEXT("SkyAtmosphere"));
@@ -244,6 +250,12 @@ void AACGameMode::SpawnEnvironment()
 	// the whole scene toward pastel blue.
 	Fog->SetFogDensity(0.000006f);
 	Fog->SetFogHeightFalloff(0.05f);
+	// Volumetric fog carries the god rays; the extinction boost makes the
+	// shafts readable without thickening the distance haze above, and the
+	// range covers the whole RTS view (units are cm).
+	Fog->SetVolumetricFog(true);
+	Fog->SetVolumetricFogExtinctionScale(3.f);
+	Fog->SetVolumetricFogDistance(80000.f);
 	Fog->RegisterComponent();
 }
 
