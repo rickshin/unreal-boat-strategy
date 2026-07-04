@@ -275,7 +275,8 @@ original design document (§ numbers refer to it):
     per-seed time-of-day (**done** — sun
     elevation/azimuth derive from the seed, midday-biased with rare
     golden hours; the atmosphere tints low suns warm automatically);
-    post polish (TAA→TSR, bloom tuned for the KiTrin glow, lens flares).
+    post polish (**done** — TSR anti-aliasing, bloom 1.1 so the
+    KiTrin glow halos at RTS distance, subtle 0.25 lens flares).
   - *Tier 2 — gameplay-adjacent VFX, ~a day each:* battle feedback pass
     (boat wakes, smoke on damaged units, real sinking animations,
     muzzle flashes — generalizes the splash-event plumbing); island

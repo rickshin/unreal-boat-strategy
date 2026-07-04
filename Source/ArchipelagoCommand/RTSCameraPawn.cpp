@@ -17,6 +17,13 @@ ARTSCameraPawn::ARTSCameraPawn()
 	Camera->PostProcessSettings.AutoExposureMinBrightness = 1.f;
 	Camera->PostProcessSettings.bOverride_AutoExposureMaxBrightness = true;
 	Camera->PostProcessSettings.AutoExposureMaxBrightness = 1.f;
+	// Post polish: a stronger bloom makes the over-bright KiTrin glow
+	// (geysers, extractor collars, harvester intakes) actually halo, and
+	// subtle lens flares put glints on the sun and bright speculars.
+	Camera->PostProcessSettings.bOverride_BloomIntensity = true;
+	Camera->PostProcessSettings.BloomIntensity = 1.1f;
+	Camera->PostProcessSettings.bOverride_LensFlareIntensity = true;
+	Camera->PostProcessSettings.LensFlareIntensity = 0.25f;
 	SetActorEnableCollision(false);
 }
 

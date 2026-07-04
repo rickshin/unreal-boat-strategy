@@ -19,6 +19,7 @@ order; each has hands-on challenges against the real codebase, and each
 | 10 | [Your Own Ship Models](lesson_10.md) | Importing real 3D assets (Blender/Kenney/Fab), licenses, data-driven mesh overrides |
 | 11 | [Where Does a Shape Come From?](lesson_11.md) | Tracing visuals to their source: hull vertex anatomy, cost-derived sizing, coupling |
 | 12 | [Painting With Light](lesson_12.md) | Per-seed time-of-day: atmosphere physics for free, shaped RNG, render-side dice |
+| 13 | [After the Render](lesson_13.md) | Post-processing: exposure, bloom & HDR glow, lens flares, TAA vs TSR |
 
 **Ground rules:** rebuild after every C++ change (the command is in
 lesson 1), revert experiments when a challenge says so, and if the game
