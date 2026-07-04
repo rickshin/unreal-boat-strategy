@@ -84,12 +84,56 @@ void AACGameMode::BeginPlay()
 	}
 
 	bMusicEnabled = !FParse::Param(CmdLine, TEXT("NoMusic"));
+	bAmbientEnabled = !FParse::Param(CmdLine, TEXT("NoAmbient"));
 	FParse::Value(CmdLine, TEXT("MusicVolume="), MusicVolume);
 	MusicVolume = FMath::Clamp(MusicVolume, 0.f, 1.f);
 
 	SpawnEnvironment();
 	StartMatch(Seed);
 	StartMusic();
+	StartAmbient();
+}
+
+void AACGameMode::StartAmbient()
+{
+	if (!bAmbientEnabled) { return; }
+	const FString Path = FPaths::ProjectDir() / TEXT("Audio/ambient/ocean-peaceful.mp3");
+
+	TWeakObjectPtr<AACGameMode> WeakThis(this);
+	Async(EAsyncExecution::ThreadPool, [WeakThis, Path]()
+	{
+		FDecodedMusic Decoded;
+		const bool bOk = DecodeMp3File(Path, Decoded);
+		AsyncTask(ENamedThreads::GameThread, [WeakThis, Path, bOk, Decoded = MoveTemp(Decoded)]() mutable
+		{
+			AACGameMode* Self = WeakThis.Get();
+			if (!Self) { return; }
+			if (!bOk)
+			{
+				UE_LOG(LogACGame, Log, TEXT("No ambient loop at %s"), *Path);
+				return;
+			}
+
+			Self->AmbientPCM = MoveTemp(Decoded.PCM);
+			Self->AmbientDuration = Decoded.Duration;
+			USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(Self);
+			Wave->SetSampleRate(Decoded.SampleRate);
+			Wave->NumChannels = Decoded.Channels;
+			Wave->Duration = INDEFINITELY_LOOPING_DURATION;
+			Wave->SoundGroup = SOUNDGROUP_Default;
+			Wave->bLooping = false;
+			Wave->QueueAudio(Self->AmbientPCM.GetData(), Self->AmbientPCM.Num());
+
+			Self->AmbientWave = Wave;
+			Self->AmbientComp = UGameplayStatics::CreateSound2D(Self, Wave, 0.4f,
+				1.f, 0.f, nullptr, /*bPersistAcrossLevelTransition=*/true, /*bAutoDestroy=*/false);
+			if (Self->AmbientComp) { Self->AmbientComp->Play(); }
+			// Top the buffer up one second before it would run dry.
+			Self->AmbientRequeueAt = Self->GetWorld()->GetTimeSeconds() + Decoded.Duration - 1.0;
+			UE_LOG(LogACGame, Log, TEXT("Ambient loop playing: %s (%.0fs)"),
+				*FPaths::GetBaseFilename(Path), Decoded.Duration);
+		});
+	});
 }
 
 void AACGameMode::StartMusic()
@@ -463,6 +507,13 @@ void AACGameMode::Tick(float DeltaSeconds)
 	{
 		MusicEndTime = -1.0;
 		PlayNextTrack();
+	}
+
+	// Keep the ambient ocean loop fed (seamless: append before it drains).
+	if (AmbientWave && AmbientRequeueAt > 0.0 && Now >= AmbientRequeueAt)
+	{
+		AmbientWave->QueueAudio(AmbientPCM.GetData(), AmbientPCM.Num());
+		AmbientRequeueAt += AmbientDuration;
 	}
 
 	// Debug capture for automated visual checks (-AutoShotAt=N).

@@ -86,13 +86,15 @@ Session flags (append to the `-game` command line):
 -ClassicOcean         # procedural Gerstner sea instead of the Water plugin
 -NoMusic              # silence the soundtrack
 -MusicVolume=0.3      # soundtrack volume (0..1, default 0.5)
+-NoAmbient            # silence the looping ocean ambience
 ```
 
 The soundtrack is played straight from the mp3 files in
 `Audio/soundtrack/` — a shuffled playlist decoded at runtime with the
 vendored [minimp3](https://github.com/lieff/minimp3) (CC0) into a
 procedural sound wave, so there are still no binary uassets. Drop more
-mp3s in that folder and they join the rotation.
+mp3s in that folder and they join the rotation. A gentle ocean bed
+(`Audio/ambient/ocean-peaceful.mp3`) loops underneath the same way.
 
 Example: replay the exact map we verified, as the swarm, vs a hard AI:
 

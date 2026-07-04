@@ -15,7 +15,10 @@
       "Bash(ls Saved/Screenshots/LinuxEditor/AutoShot.png)",
       "Bash(timeout 45 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=6 -NoEdgeScroll -FollowView -NoMusic)",
       "Bash(python3 -)",
-      "Bash(timeout 100 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=40 -NoEdgeScroll -NoMusic)"
+      "Bash(timeout 100 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1600 -resy=900 -Seed=7 -AutoShotAt=40 -NoEdgeScroll -NoMusic)",
+      "Bash(awk '{print $1}')",
+      "Bash(file ~/Projects/unreal-engine-project/Audio/ambient/*.mp3)",
+      "Bash(timeout 45 ~/UnrealEngine/Engine/Binaries/Linux/UnrealEditor __TRACKED_VAR__/ArchipelagoCommand.uproject -game -windowed -resx=1280 -resy=720 -Seed=7 -NoEdgeScroll)"
     ]
   }
 }

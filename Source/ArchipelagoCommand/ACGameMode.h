@@ -106,4 +106,16 @@ private:
 	float MusicVolume = 0.5f;
 	bool bMusicEnabled = true;
 	bool bMusicDecoding = false;
+
+	// Ambient bed: Audio/ambient/ocean-peaceful.mp3 looped by re-queueing
+	// the decoded PCM before the buffer drains (-NoAmbient disables).
+	void StartAmbient();
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> AmbientComp;
+	UPROPERTY()
+	TObjectPtr<USoundWaveProcedural> AmbientWave;
+	TArray<uint8> AmbientPCM;
+	float AmbientDuration = 0.f;
+	double AmbientRequeueAt = -1.0;
+	bool bAmbientEnabled = true;
 };
