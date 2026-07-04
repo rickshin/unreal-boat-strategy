@@ -262,6 +262,26 @@ original design document (§ numbers refer to it):
   packaged builds and `-ClassicOcean` fall back to the procedural
   Gerstner sheet), and the sea needs a seabed or depth-based opacity
   renders it invisible.
+- **Graphics roadmap (options, in payoff-per-effort order):**
+  - *Tier 1 — engine features, code-only, hours:* volumetric clouds
+    (`UVolumetricCloudComponent`, spawnable like our sky); god rays +
+    volumetric fog (flags on the sun/fog components we already spawn);
+    per-seed time-of-day (derive sun angle/color from the map seed);
+    post polish (TAA→TSR, bloom tuned for the KiTrin glow, lens flares).
+  - *Tier 2 — gameplay-adjacent VFX, ~a day each:* battle feedback pass
+    (boat wakes, smoke on damaged units, real sinking animations,
+    muzzle flashes — generalizes the splash-event plumbing); island
+    foliage via instanced primitives (palms/scrub, zero assets); RTS
+    order feedback (move-ping rings, rally markers, target lines);
+    3D fog of war (darken unexplored ocean in-world, not just minimap).
+  - *Tier 3 — bigger lifts:* an authored island master material
+    (height/slope sand→grass→rock blend — a deliberate exception to the
+    no-uasset rule, like the soundtrack); real ship models via the
+    lesson-10 mesh-override pipeline; weather states (live Gerstner
+    parameter swaps, Niagara rain, storm foam).
+  - *Skipped on purpose:* Nanite (useless for low-poly primitives),
+    Lumen beyond defaults (subtle at RTS distance for the GPU cost),
+    DLSS (external plugin; the game is not GPU-bound).
 - **Deferred (design hooks in place):** ship boarding/infantry (§11) —
   abstract resolution slots naturally into the Combat system; research
   queues (§15); optional victory modes (§17); save/load (§19) — the sim
