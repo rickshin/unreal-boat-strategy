@@ -54,6 +54,7 @@ public:
 	const TMap<FEntityId, AUnitActor*>& EntityActors() const { return EntityActorMap; }
 
 	const TArray<FACAlert>& Alerts() const { return ActiveAlerts; }
+	UNiagaraSystem* GetSplashFX() const { return SplashFX; }   // shared burst (splashes, wakes)
 
 	// Water surface at a world XY: Epic Water plugin waves when active,
 	// otherwise the classic procedural wave function. Render-only.

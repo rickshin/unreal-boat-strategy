@@ -3,6 +3,8 @@
 #include "ACTypes.h"
 #include "OceanActor.h"
 #include "Sim/SimGame.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -125,6 +127,7 @@ void AUnitActor::BuildBoat(float Length, float Beam, float Height, const FLinear
 	}
 	RingRadius = Length * 0.62f;
 	BobDamp = FMath::Clamp(900.f / Length, 0.35f, 1.f);
+	HullLength = Length;
 }
 
 void AUnitActor::BuildHarvester(const FLinearColor& Color)
@@ -317,6 +320,30 @@ void AUnitActor::UpdateVisual(float Alpha, float WorldTime)
 	}
 
 	SetActorLocationAndRotation(FVector(XY.X, XY.Y, Z), Rot);
+
+	// Wake: churned foam off the stern while under way. Burst cadence and
+	// size scale with speed; hidden (fogged) hulls leave no visible trail.
+	if (HullLength > 0.f && !IsHidden() && GM && WorldTime >= NextWakeTime)
+	{
+		const float SimSpeed = (CurrPos - PrevPos).Size() / SIM_DT;   // cells/sec
+		if (SimSpeed > 1.2f)
+		{
+			NextWakeTime = WorldTime + FMath::FRandRange(0.55f, 0.75f) / FMath::Min(SimSpeed / 2.f, 2.f);
+			if (UNiagaraSystem* FX = GM->GetSplashFX())
+			{
+				const FVector Stern = GetActorLocation()
+					- GetActorForwardVector() * (HullLength * 0.5f);
+				const float Scale = FMath::Clamp(0.22f + SimSpeed * 0.05f, 0.25f, 0.55f);
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), FX,
+					FVector(Stern.X, Stern.Y, Z + 25.f), FRotator(90.f, 0.f, 0.f),
+					FVector(Scale), true);
+			}
+		}
+		else
+		{
+			NextWakeTime = WorldTime + 0.3;   // idle: re-check soon, spawn nothing
+		}
+	}
 }
 
 void AUnitActor::SetSelected(bool bSelected)

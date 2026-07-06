@@ -63,6 +63,8 @@ private:
 	FVector2f PrevPos = FVector2f::ZeroVector;
 	FVector2f CurrPos = FVector2f::ZeroVector;
 	float CurAirZ = AC_AIR_ALTITUDE;
+	float HullLength = 0.f;      // wake spawns off the stern
+	double NextWakeTime = 0.0;
 	float PrevFacing = 0.f;
 	float CurrFacing = 0.f;
 	float BuildProgress = 1.f;

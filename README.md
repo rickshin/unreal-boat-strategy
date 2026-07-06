@@ -278,8 +278,9 @@ original design document (§ numbers refer to it):
     post polish (**done** — TSR anti-aliasing, bloom 1.1 so the
     KiTrin glow halos at RTS distance, subtle 0.25 lens flares).
   - *Tier 2 — gameplay-adjacent VFX, ~a day each:* battle feedback pass
-    (boat wakes, smoke on damaged units, real sinking animations,
-    muzzle flashes — generalizes the splash-event plumbing); island
+    (**boat wakes done** — speed-gated foam bursts off the stern, sized
+    and paced by speed, fog-aware; still open: smoke on damaged units,
+    real sinking animations, muzzle flashes); island
     foliage via instanced primitives (palms/scrub, zero assets); RTS
     order feedback (move-ping rings, rally markers, target lines);
     3D fog of war (darken unexplored ocean in-world, not just minimap).
