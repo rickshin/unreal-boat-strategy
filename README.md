@@ -117,6 +117,7 @@ build the `ArchipelagoCommandEditor` target, open, press Play.
 | `Q` then click | Attack-move (engage everything on the way) |
 | `H` | Stop (halt) |
 | `V` | Direct control: over-the-shoulder view of the selected unit; `V`/`Esc` returns overhead |
+| `L` | Select all your larvae, map-wide (Vanguard) |
 | `W`/`S` (in direct control) | Throttle ahead / astern (reverse is slower) |
 | `A`/`D` (in direct control) | Rudder: turn the hull (more authority with way on) |
 | `Space` (in direct control) | Fire weapons at the enemy nearest your crosshair (auto-fire is off) |

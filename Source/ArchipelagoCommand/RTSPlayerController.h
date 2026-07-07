@@ -44,6 +44,7 @@ private:
 	void OnCommandPressed();
 	void OnCommandReleased();
 	void OnToggleUnitView();
+	void OnSelectAllLarvae();
 	void OnAttackMoveKey();
 	void OnStopKey();
 	void OnSpacePressed();    // overhead: jump to HQ; unit view: fire held

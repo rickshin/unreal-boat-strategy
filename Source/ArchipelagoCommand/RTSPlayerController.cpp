@@ -47,6 +47,7 @@ void ARTSPlayerController::SetupInputComponent()
 	InputComponent->BindAction(TEXT("Command"), IE_Pressed, this, &ARTSPlayerController::OnCommandPressed);
 	InputComponent->BindAction(TEXT("Command"), IE_Released, this, &ARTSPlayerController::OnCommandReleased);
 	InputComponent->BindAction(TEXT("ToggleUnitView"), IE_Pressed, this, &ARTSPlayerController::OnToggleUnitView);
+	InputComponent->BindAction(TEXT("SelectAllLarvae"), IE_Pressed, this, &ARTSPlayerController::OnSelectAllLarvae);
 	InputComponent->BindAction(TEXT("AttackMove"), IE_Pressed, this, &ARTSPlayerController::OnAttackMoveKey);
 	InputComponent->BindAction(TEXT("Stop"), IE_Pressed, this, &ARTSPlayerController::OnStopKey);
 	InputComponent->BindAction(TEXT("JumpToHQ"), IE_Pressed, this, &ARTSPlayerController::OnSpacePressed);
@@ -483,6 +484,28 @@ void ARTSPlayerController::OnToggleUnitView()
 		PlacementTpl = NAME_None;
 		bAttackMovePending = false;
 		Cam->EnterFollow(Selection[0]);
+	}
+}
+
+void ARTSPlayerController::OnSelectAllLarvae()
+{
+	// SC2-style: grab every idle larva you own, map-wide.
+	AACGameMode* Mode = GM();
+	if (!Mode || !Mode->Sim() || IsInUnitView()) { return; }
+	FSimGame& G = *Mode->Sim();
+	const int32 Me = Mode->LocalPlayer();
+
+	Selection.Reset();
+	for (const FEntityId Eid : SimSortedKeys(G.World.Unit))
+	{
+		const FOwnerC* O = G.World.Own.Find(Eid);
+		if (!O || O->Player != Me || G.World.Morph.Contains(Eid)) { continue; }
+		const FUnitTpl* T = G.Content.Unit(G.Players[Me].FactionId, G.World.Unit[Eid].Tpl);
+		if (T && T->bMorph && T->Weapons.Num() == 0) { Selection.Add(Eid); }
+	}
+	for (const auto& Pair : Mode->EntityActors())
+	{
+		Pair.Value->SetSelected(Selection.Contains(Pair.Key));
 	}
 }
 
