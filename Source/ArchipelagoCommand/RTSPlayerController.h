@@ -49,6 +49,8 @@ private:
 	void OnStopKey();
 	void OnSpacePressed();    // overhead: jump to HQ; unit view: fire held
 	void OnSpaceReleased();
+	void OnFireAltPressed();  // Backspace: fire only (unit view)
+	void OnFireAltReleased();
 	void OnCancelEsc();
 	void OnRestart();
 	void OnHotkey(int32 Index);

@@ -52,6 +52,8 @@ void ARTSPlayerController::SetupInputComponent()
 	InputComponent->BindAction(TEXT("Stop"), IE_Pressed, this, &ARTSPlayerController::OnStopKey);
 	InputComponent->BindAction(TEXT("JumpToHQ"), IE_Pressed, this, &ARTSPlayerController::OnSpacePressed);
 	InputComponent->BindAction(TEXT("JumpToHQ"), IE_Released, this, &ARTSPlayerController::OnSpaceReleased);
+	InputComponent->BindAction(TEXT("FireAlt"), IE_Pressed, this, &ARTSPlayerController::OnFireAltPressed);
+	InputComponent->BindAction(TEXT("FireAlt"), IE_Released, this, &ARTSPlayerController::OnFireAltReleased);
 	InputComponent->BindAction(TEXT("CancelEsc"), IE_Pressed, this, &ARTSPlayerController::OnCancelEsc);
 	InputComponent->BindAction(TEXT("Restart"), IE_Pressed, this, &ARTSPlayerController::OnRestart);
 	for (int32 i = 1; i <= 9; ++i)
@@ -543,6 +545,17 @@ void ARTSPlayerController::OnSpacePressed()
 }
 
 void ARTSPlayerController::OnSpaceReleased()
+{
+	bFireHeld = false;
+}
+
+void ARTSPlayerController::OnFireAltPressed()
+{
+	// Backspace is a pure trigger: no overhead-mode side effect.
+	if (IsInUnitView()) { bFireHeld = true; }
+}
+
+void ARTSPlayerController::OnFireAltReleased()
 {
 	bFireHeld = false;
 }
