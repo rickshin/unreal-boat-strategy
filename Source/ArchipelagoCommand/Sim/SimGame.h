@@ -110,6 +110,16 @@ struct FSpawnerC
 	int32 Cooldown = 0;
 };
 
+// Escort (SC2 broodling-style): children bred by a mobile parent shadow
+// it until a threat nears, then LAUNCH at the enemy with a decaying
+// speed burst; when the threat dies they fall back in behind the parent.
+struct FEscortC
+{
+	FEntityId Parent = INVALID_ENTITY;
+	FEntityId LaunchTarget = INVALID_ENTITY;
+	int32 BoostTicks = 0;
+};
+
 struct FRepairC { float Rate = 15.f; float Range = 4.f; };
 
 struct FVisionC { float Radius = 8.f; };
@@ -164,6 +174,7 @@ struct FSimWorld
 	TMap<FEntityId, FCrawlC> Crawl;
 	TMap<FEntityId, FMorphC> Morph;
 	TMap<FEntityId, FSpawnerC> Spawner;
+	TMap<FEntityId, FEscortC> Escort;
 	TMap<FEntityId, FRepairC> Repair;
 	TMap<FEntityId, FVisionC> Vision;
 	TMap<FEntityId, FProjC> Proj;
@@ -178,7 +189,7 @@ struct FSimWorld
 		Pos.Remove(Id); Own.Remove(Id); Unit.Remove(Id); Struct.Remove(Id);
 		Health.Remove(Id); Mover.Remove(Id); Combat.Remove(Id); Prod.Remove(Id);
 		Harvest.Remove(Id); Crawl.Remove(Id); Morph.Remove(Id); Spawner.Remove(Id);
-		Repair.Remove(Id); Vision.Remove(Id);
+		Escort.Remove(Id); Repair.Remove(Id); Vision.Remove(Id);
 		Proj.Remove(Id); BuildTask.Remove(Id); Manual.Remove(Id);
 	}
 

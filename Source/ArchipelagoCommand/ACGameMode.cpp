@@ -374,6 +374,16 @@ void AACGameMode::StartMatch(uint64 Seed)
 			}
 		}
 	}
+	// Debug: -TestSpawn=<tpl> drops one extra unit of the player's faction
+	// beside the HQ (handy for testing late-tech units like broodlords).
+	FString TestSpawn;
+	if (FParse::Value(FCommandLine::Get(), TEXT("TestSpawn="), TestSpawn) && !TestSpawn.IsEmpty())
+	{
+		SimGame->SpawnUnit(LocalPlayer(), FName(*TestSpawn),
+			SimGame->Map.NearestWater(SimGame->Map.HomeSpawn[LocalPlayer()] + FVector2f(4.f, 0.f)));
+		UE_LOG(LogACGame, Log, TEXT("TestSpawn: %s"), *TestSpawn);
+	}
+
 	// Debug: -FollowView drops straight into the unit view on the first own
 	// unit (used for automated visual checks of the chase camera).
 	if (PC && FParse::Param(FCommandLine::Get(), TEXT("FollowView")))

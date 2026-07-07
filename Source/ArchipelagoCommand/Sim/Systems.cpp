@@ -434,7 +434,13 @@ void SimSys::RunEconomy(FSimGame& G)
 		}
 		if (Nearby < Sp.Max)
 		{
-			G.SpawnUnit(Player, Sp.Unit, FindSpawnSlot(G, P->P));
+			const FEntityId Child = G.SpawnUnit(Player, Sp.Unit, FindSpawnSlot(G, P->P));
+			// Children of a mobile breeder (Broodlord) escort their parent;
+			// structure-bred larvae just pool at home as before.
+			if (Child != INVALID_ENTITY && !G.World.Struct.Contains(Eid))
+			{
+				G.World.Escort.Add(Child, { Eid });
+			}
 		}
 	}
 
@@ -625,6 +631,78 @@ void SimSys::RunEconomy(FSimGame& G)
 
 void SimSys::RunMovement(FSimGame& G)
 {
+	// Escorts (broodlings): shadow the parent until a threat nears, then
+	// launch at it with a speed burst that decays back to normal.
+	for (const FEntityId Eid : SimSortedKeys(G.World.Escort))
+	{
+		FEscortC& Esc = G.World.Escort[Eid];
+		FMoverC* M = G.World.Mover.Find(Eid);
+		FPosC* P = G.World.Pos.Find(Eid);
+		if (!M || !P) { continue; }
+		if (Esc.BoostTicks > 0) { --Esc.BoostTicks; }
+
+		// Orphaned: fight on as a free unit.
+		if (!G.World.IsAlive(Esc.Parent))
+		{
+			G.World.Escort.Remove(Eid);
+			continue;
+		}
+		const int32 Player = G.World.Own[Eid].Player;
+		const FVector2f ParentP = G.World.Pos[Esc.Parent].P;
+
+		// Mid-launch: keep the chase; fall back in when the target dies.
+		if (Esc.LaunchTarget != INVALID_ENTITY)
+		{
+			if (G.World.IsAlive(Esc.LaunchTarget)) { continue; }
+			Esc.LaunchTarget = INVALID_ENTITY;
+			M->Order = EMoveOrder::Idle;
+			M->Waypoints.Reset();
+			M->ChaseTarget = INVALID_ENTITY;
+		}
+
+		// Threat scan around the parent (its brood strikes for it).
+		const FCombatC* C = G.World.Combat.Find(Eid);
+		FEntityId Threat = INVALID_ENTITY;
+		float BestDist = 9.f;
+		for (const FEntityId Other : SimSortedKeys(G.World.Health))
+		{
+			if (!IsEnemyTargetable(G, Player, Other)) { continue; }
+			bool bCanHit = false;
+			if (C)
+			{
+				for (const FWeaponTpl& W : C->Weapons)
+				{
+					if (MatchesFilter(G, W.Filter, Other)) { bCanHit = true; break; }
+				}
+			}
+			if (!bCanHit) { continue; }
+			const float D = (G.World.Pos[Other].P - ParentP).Size();
+			if (D < BestDist) { BestDist = D; Threat = Other; }
+		}
+		if (Threat != INVALID_ENTITY)
+		{
+			// LAUNCH: burst toward the enemy for two seconds.
+			Esc.LaunchTarget = Threat;
+			Esc.BoostTicks = 2 * SIM_TICKS_PER_SEC;
+			M->Order = EMoveOrder::Chase;
+			M->ChaseTarget = Threat;
+			M->Waypoints.Reset();
+			M->RepathCooldown = 0;
+			if (FCombatC* CC = G.World.Combat.Find(Eid)) { CC->Target = Threat; }
+			continue;
+		}
+
+		// Peacetime: hold formation in a ring behind the parent.
+		if ((P->P - ParentP).Size() > 3.f)
+		{
+			const float Slot = (Eid % 6) * (2.f * PI / 6.f);
+			const FVector2f Dest = G.Map.NearestWater(
+				ParentP + FVector2f(FMath::Cos(Slot), FMath::Sin(Slot)) * 1.6f);
+			M->Order = EMoveOrder::Move;
+			M->Waypoints = { Dest };   // escorts fly/sail straight to heel
+		}
+	}
+
 	for (const FEntityId Eid : SimSortedKeys(G.World.Mover))
 	{
 		if (G.World.Morph.Contains(Eid)) { continue; }   // cocoons are sessile
@@ -724,13 +802,18 @@ void SimSys::RunMovement(FSimGame& G)
 			}
 		}
 
-		// Advance along waypoints.
+		// Advance along waypoints. Launching escorts get a decaying burst.
 		if (M.Waypoints.Num() > 0)
 		{
+			float SpeedMult = 1.f;
+			if (const FEscortC* Esc = G.World.Escort.Find(Eid))
+			{
+				if (Esc->BoostTicks > 0) { SpeedMult = 2.2f; }
+			}
 			const FVector2f Target = M.Waypoints[0];
 			FVector2f Delta = Target - P.P;
 			const float Dist = Delta.Size();
-			const float Step = M.Speed * SIM_DT;
+			const float Step = M.Speed * SpeedMult * SIM_DT;
 			if (Dist <= FMath::Max(Step, 0.15f))
 			{
 				P.P = Target;
