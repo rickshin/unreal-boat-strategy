@@ -132,6 +132,8 @@ struct FProjC
 	float Speed = 14.f;
 	float Damage = 10.f;
 	EWeaponType Type = EWeaponType::Shell;
+	ETargetFilter Filter = ETargetFilter::Any;
+	float Splash = 0.f;       // AOE radius in cells (0 = single target)
 	int32 SourcePlayer = -1;
 	int32 LifeTicks = 200;
 };

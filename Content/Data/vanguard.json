@@ -59,7 +59,7 @@
       "morph": true,
       "produces": ["ravanger"],
       "weapons": [
-        { "type": "torpedo", "damage": 15, "range": 6, "reload": 1.0, "projSpeed": 12, "targets": "naval" }
+        { "type": "torpedo", "damage": 15, "range": 6, "reload": 1.0, "projSpeed": 12, "targets": "naval", "splash": 1.5 }
       ]
     },
     "ravanger": {

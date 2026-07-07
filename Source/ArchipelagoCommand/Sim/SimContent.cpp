@@ -49,6 +49,7 @@ static TArray<FWeaponTpl> ParseWeapons(const TSharedPtr<FJsonObject>& Obj)
 		T.Range = W->GetNumberField(TEXT("range"));
 		T.Reload = W->GetNumberField(TEXT("reload"));
 		T.ProjSpeed = W->HasField(TEXT("projSpeed")) ? W->GetNumberField(TEXT("projSpeed")) : 14.0;
+		T.Splash = W->HasField(TEXT("splash")) ? W->GetNumberField(TEXT("splash")) : 0.0;
 		Out.Add(T);
 	}
 	return Out;

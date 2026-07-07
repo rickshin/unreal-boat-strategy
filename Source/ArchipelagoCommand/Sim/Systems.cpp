@@ -951,6 +951,8 @@ void SimSys::RunCombat(FSimGame& G)
 				PC.Speed = W.ProjSpeed;
 				PC.Damage = W.Damage;
 				PC.Type = W.Type;
+				PC.Filter = W.Filter;
+				PC.Splash = W.Splash;
 				PC.SourcePlayer = Player;
 				G.World.Proj.Add(ProjId, PC);
 				PushShotEvent(G, Eid, Player, P->P);
@@ -1007,6 +1009,8 @@ void SimSys::RunCombat(FSimGame& G)
 			PC.Speed = W.ProjSpeed;
 			PC.Damage = W.Damage;
 			PC.Type = W.Type;
+			PC.Filter = W.Filter;
+			PC.Splash = W.Splash;
 			PC.SourcePlayer = Player;
 			G.World.Proj.Add(Proj, PC);
 			PushShotEvent(G, Eid, Player, P->P);
@@ -1029,7 +1033,23 @@ void SimSys::RunCombat(FSimGame& G)
 		const float Step = P.Speed * SIM_DT;
 		if (Dist <= FMath::Max(Step, 0.35f))
 		{
-			if (G.World.IsAlive(P.Target))
+			if (P.Splash > 0.f)
+			{
+				// AOE: detonate at the impact point, full damage at center
+				// falling to half at the edge; enemies only.
+				const FVector2f At = P.LastKnown;
+				for (const FEntityId Victim : SimSortedKeys(G.World.Health))
+				{
+					const FOwnerC* VO = G.World.Own.Find(Victim);
+					if (!VO || VO->Player == P.SourcePlayer || VO->Player < 0) { continue; }
+					const FPosC* VP = G.World.Pos.Find(Victim);
+					if (!VP) { continue; }
+					const float R = (VP->P - At).Size();
+					if (R > P.Splash || !MatchesFilter(G, P.Filter, Victim)) { continue; }
+					G.ApplyDamage(Victim, P.Damage * (1.f - 0.5f * R / P.Splash), P.Type, P.SourcePlayer);
+				}
+			}
+			else if (G.World.IsAlive(P.Target))
 			{
 				G.ApplyDamage(P.Target, P.Damage, P.Type, P.SourcePlayer);
 			}

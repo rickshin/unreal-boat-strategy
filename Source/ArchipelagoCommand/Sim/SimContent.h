@@ -14,6 +14,7 @@ struct FWeaponTpl
 	float Range = 6.f;        // sim cells
 	float Reload = 1.5f;      // seconds
 	float ProjSpeed = 14.f;   // cells/sec
+	float Splash = 0.f;       // AOE radius in cells (0 = single target)
 
 	// Armor penetration by weapon type (spec 10): missiles ignore 30% of
 	// armor, torpedoes 50%.
