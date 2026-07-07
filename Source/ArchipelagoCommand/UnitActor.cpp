@@ -158,6 +158,25 @@ void AUnitActor::BuildCrawler(const FLinearColor& Color)
 	BobDamp = 0.f;
 }
 
+void AUnitActor::BuildLarva(const FLinearColor& Color)
+{
+	// A grub: squat cylinder lying on its side, with a head knob and a
+	// faint KiTrin-glow eye. Deliberately small and wriggly-looking.
+	const FLinearColor Dark = Color * 0.55f + FLinearColor(0.08f, 0.06f, 0.10f);
+	UStaticMeshComponent* Body = AddShape(AC_MESH_CYLINDER,
+		FVector(0, 0, 45.f), FVector(0.55f, 0.55f, 1.5f), Color);
+	Body->SetRelativeRotation(FRotator(90.f, 0.f, 0.f));   // lie along +X
+	UStaticMeshComponent* Tail = AddShape(AC_MESH_CYLINDER,
+		FVector(-70.f, 0, 42.f), FVector(0.42f, 0.42f, 0.8f), Dark);
+	Tail->SetRelativeRotation(FRotator(90.f, 0.f, 0.f));
+	AddShape(AC_MESH_SPHERE, FVector(85.f, 0, 55.f), FVector(0.5f), Dark);
+	AddShape(AC_MESH_SPHERE, FVector(115.f, 0, 62.f), FVector(0.14f),
+		FLinearColor(2.2f, 0.85f, 0.08f));   // glowing eye
+	RingRadius = 190.f;
+	BobDamp = 1.f;         // tiny grubs ride every ripple
+	// HullLength stays 0: larvae drift, they don't churn a wake.
+}
+
 void AUnitActor::BuildAircraft(float Size, const FLinearColor& Color)
 {
 	// Fuselage + swept wing + tail, all flattened boxes.
@@ -237,6 +256,11 @@ void AUnitActor::InitFor(const FSimGame& G, FEntityId InEid)
 		if (bIsGround)
 		{
 			BuildCrawler(Color);
+		}
+		else if (T && T->bMorph && T->Weapons.Num() == 0)
+		{
+			// Pure morphers (larvae) look like grubs, whatever their domain.
+			BuildLarva(Color);
 		}
 		else if (bIsAir && T && T->bHarvester)
 		{

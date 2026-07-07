@@ -46,6 +46,7 @@ private:
 	void BuildAircraft(float Size, const FLinearColor& Color);
 	void BuildHarvester(const FLinearColor& Color);
 	void BuildCrawler(const FLinearColor& Color);
+	void BuildLarva(const FLinearColor& Color);
 	void BuildStructure(EStructureKind Kind, const FLinearColor& Color, float Footprint);
 	UStaticMeshComponent* AddBox(const FVector& Offset, const FVector& Scale, const FLinearColor& Color);
 	UStaticMeshComponent* AddShape(const TCHAR* MeshPath, const FVector& Offset, const FVector& Scale, const FLinearColor& Color);
