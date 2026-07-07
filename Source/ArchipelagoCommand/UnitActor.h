@@ -65,6 +65,7 @@ private:
 	float CurAirZ = AC_AIR_ALTITUDE;
 	float HullLength = 0.f;      // wake spawns off the stern
 	double NextWakeTime = 0.0;
+	float StructBaseZ = 0.f;     // extractors sit on raised coastal terrain
 	float PrevFacing = 0.f;
 	float CurrFacing = 0.f;
 	float BuildProgress = 1.f;

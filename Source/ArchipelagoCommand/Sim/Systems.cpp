@@ -126,6 +126,7 @@ void SimSys::RunCommands(FSimGame& G)
 				SetMoveOrder(G, Eid, Dest,
 					Cmd.Type == ECmdType::AttackMove ? EMoveOrder::AttackMove : EMoveOrder::Move);
 				if (FHarvestC* HC = G.World.Harvest.Find(Eid)) { HC->State = EHarvestState::None; }
+				G.World.BuildTask.Remove(Eid);   // abandon construction (resume by right-clicking the site)
 			}
 			break;
 		}
@@ -161,6 +162,7 @@ void SimSys::RunCommands(FSimGame& G)
 				}
 				if (FCombatC* C = G.World.Combat.Find(Eid)) { C->Target = INVALID_ENTITY; }
 				if (FHarvestC* HC = G.World.Harvest.Find(Eid)) { HC->State = EHarvestState::None; }
+				G.World.BuildTask.Remove(Eid);
 			}
 			break;
 		}
@@ -287,6 +289,21 @@ void SimSys::RunCommands(FSimGame& G)
 			const FOwnerC* O = G.World.Own.Find(Builder);
 			const FUnitC* U = G.World.Unit.Find(Builder);
 			if (!O || O->Player != Cmd.Player || !U || !U->bBuilder) { break; }
+			// Resume: TargetEid names an abandoned, unfinished own site.
+			if (Cmd.TargetEid != INVALID_ENTITY)
+			{
+				const FStructC* Site = G.World.Struct.Find(Cmd.TargetEid);
+				const FOwnerC* SiteOwner = G.World.Own.Find(Cmd.TargetEid);
+				const FPosC* SitePos = G.World.Pos.Find(Cmd.TargetEid);
+				if (Site && !Site->bComplete && SiteOwner && SiteOwner->Player == Cmd.Player && SitePos)
+				{
+					G.World.BuildTask.Add(Builder, { Cmd.TargetEid });
+					SetMoveOrder(G, Builder,
+						G.Map.NearestWater(SitePos->P + FVector2f(1.8f, 0.f)), EMoveOrder::Move);
+					if (FHarvestC* HC = G.World.Harvest.Find(Builder)) { HC->State = EHarvestState::None; }
+				}
+				break;
+			}
 			if (!G.IsValidBuildSite(Cmd.Player, Cmd.TplId, Cmd.Target)) { break; }
 			const FStructTpl* T = G.Content.Structure(G.Players[Cmd.Player].FactionId, Cmd.TplId);
 			if (!T || !G.CanAfford(Cmd.Player, T->Cost))

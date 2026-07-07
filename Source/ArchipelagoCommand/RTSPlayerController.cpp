@@ -422,6 +422,30 @@ void ARTSPlayerController::IssuePointCommand(const FVector2D& WorldXY, bool bAtt
 	Cmd.Units = Movers;
 	Cmd.Target = SimTarget;
 
+	// Right-click an own unfinished structure with a builder selected:
+	// resume its construction.
+	const FEntityId Clicked = PickEntityAt(WorldXY, false);
+	if (Clicked != INVALID_ENTITY)
+	{
+		const FStructC* S = G.World.Struct.Find(Clicked);
+		const FOwnerC* O = G.World.Own.Find(Clicked);
+		if (S && !S->bComplete && O && O->Player == Me)
+		{
+			for (const FEntityId E : Movers)
+			{
+				const FUnitC* U = G.World.Unit.Find(E);
+				if (!U || !U->bBuilder) { continue; }
+				FSimCommand BCmd;
+				BCmd.Type = ECmdType::Build;
+				BCmd.Player = Me;
+				BCmd.Units = { E };
+				BCmd.TargetEid = Clicked;
+				Mode->QueueCommand(BCmd);
+				return;
+			}
+		}
+	}
+
 	const FEntityId Enemy = PickEntityAt(WorldXY, true);
 	if (!bAttackMove && Enemy != INVALID_ENTITY)
 	{

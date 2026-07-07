@@ -223,6 +223,8 @@ void AUnitActor::InitFor(const FSimGame& G, FEntityId InEid)
 		const FStructTpl* T = G.Content.Structure(G.Players[OwnerPlayer].FactionId, S->Tpl);
 		DisplayName = T ? T->Name : TEXT("Structure");
 		BuildStructure(S->Kind, Color, 2.f);
+		// Extractors stand on the geyser's coastal terrain, not at sea level.
+		if (S->Kind == EStructureKind::Extractor) { StructBaseZ = 70.f; }
 	}
 	else
 	{
@@ -313,10 +315,14 @@ void AUnitActor::UpdateVisual(float Alpha, float WorldTime)
 		Rot = FRotationMatrix::MakeFromZX(TiltN, Fwd).Rotator();
 	}
 
-	// Structures rise out of the water while under construction.
-	if (bIsStructure && BuildProgress < 1.f)
+	// Structures sit on their base height and rise while under construction.
+	if (bIsStructure)
 	{
-		Z -= (1.f - BuildProgress) * 220.f;
+		Z += StructBaseZ;
+		if (BuildProgress < 1.f)
+		{
+			Z -= (1.f - BuildProgress) * 220.f;
+		}
 	}
 
 	SetActorLocationAndRotation(FVector(XY.X, XY.Y, Z), Rot);
