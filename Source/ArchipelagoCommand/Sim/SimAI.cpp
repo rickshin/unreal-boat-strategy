@@ -138,6 +138,56 @@ namespace
 			}
 		}
 
+		// 2.5) Morph factions: idle larvae (weaponless morphers) are the
+		// production queue. Builders first when short, then army via the
+		// rotating cursor.
+		int32 OwnedIslandsM = 0;
+		for (const FSimIsland& Isl : G.Map.Islands)
+		{
+			if (Isl.OwnerPlayer == Player) { ++OwnedIslandsM; }
+		}
+		const int32 WantHarvestersM = 2 + FMath::Max(0, OwnedIslandsM - 1);
+		for (const FEntityId Eid : SimSortedKeys(G.World.Unit))
+		{
+			const FOwnerC* O = G.World.Own.Find(Eid);
+			if (!O || O->Player != Player || G.World.Morph.Contains(Eid)) { continue; }
+			const FUnitTpl* T = G.Content.Unit(Pl.FactionId, G.World.Unit[Eid].Tpl);
+			if (!T || !T->bMorph || T->Weapons.Num() > 0 || T->MorphInto.Num() == 0) { continue; }
+
+			FName Choice;
+			const FUnitTpl* BT = G.Content.Unit(Pl.FactionId, F.BuilderId);
+			if (Harvesters < WantHarvestersM && T->MorphInto.Contains(F.BuilderId)
+				&& BT && G.CanAfford(Player, BT->Cost))
+			{
+				Choice = F.BuilderId;
+				++Harvesters;
+			}
+			else
+			{
+				for (int32 Try = 0; Try < T->MorphInto.Num(); ++Try)
+				{
+					const FName Opt = T->MorphInto[(S.CompositionCursor + Try) % T->MorphInto.Num()];
+					const FUnitTpl* MT = G.Content.Unit(Pl.FactionId, Opt);
+					if (!MT || MT->bBuilder || MT->Weapons.Num() == 0) { continue; }
+					if (MT->Value() > 250 && Pl.KiTrin < MT->Cost + 100) { continue; }
+					if (!G.CanAfford(Player, MT->Cost)) { continue; }
+					Choice = Opt;
+					S.CompositionCursor = (S.CompositionCursor + Try + 1)
+						% FMath::Max(1, T->MorphInto.Num());
+					break;
+				}
+			}
+			if (!Choice.IsNone())
+			{
+				FSimCommand Cmd;
+				Cmd.Type = ECmdType::Morph;
+				Cmd.Player = Player;
+				Cmd.Units = { Eid };
+				Cmd.TplId = Choice;
+				G.PendingCommands.Add(Cmd);
+			}
+		}
+
 		// 3) Army composition: keep every production queue busy. Walk the
 		// producer's option list with a rotating cursor weighted toward cheap
 		// units early and capital ships once the gas flows.

@@ -1,0 +1,190 @@
+{
+  "faction": "vanguard",
+  "display": "Vanguard Swarm",
+  "color": [150, 60, 200],
+  "hq": "van_hq",
+  "builder": "drone",
+  "units": {
+    "larva": {
+      "name": "Larva", "class": "naval",
+      "cost": 0, "buildTime": 1,
+      "hp": 25, "armor": 0, "speed": 1.5, "vision": 4,
+      "morph": true,
+      "produces": ["roach", "drone", "zergling", "hydra", "ultra", "infestor"]
+    },
+    "flying_larva": {
+      "name": "Spire Larva", "class": "air",
+      "cost": 0, "buildTime": 1,
+      "hp": 25, "armor": 0, "speed": 1.5, "vision": 4,
+      "morph": true,
+      "produces": ["mutalisk", "corrupter"]
+    },
+    "drone": {
+      "name": "Drone", "class": "harvester",
+      "cost": 50, "buildTime": 5,
+      "hp": 25, "armor": 0, "speed": 5, "vision": 4,
+      "crawler": "van_crawler", "gasCapacity": 100, "dockTime": 10,
+      "weapons": [
+        { "type": "disrupt", "damage": 1, "range": 10, "reload": 0.5, "projSpeed": 10 }
+      ],
+      "builds": ["van_colony", "van_colony_2", "van_defense"]
+    },
+    "van_crawler": {
+      "name": "Creep Crawler", "class": "ground",
+      "cost": 0, "buildTime": 1,
+      "hp": 60, "armor": 0, "speed": 1.4, "vision": 4
+    },
+    "zergling": {
+      "name": "Zergling", "class": "naval",
+      "cost": 25, "buildTime": 3,
+      "hp": 50, "armor": 2, "speed": 8, "vision": 11,
+      "morph": true,
+      "produces": ["baneling"],
+      "weapons": [
+        { "type": "shell", "damage": 3, "range": 1, "reload": 0.5, "projSpeed": 16 }
+      ]
+    },
+    "baneling": {
+      "name": "Baneling", "class": "naval",
+      "cost": 75, "buildTime": 3,
+      "hp": 50, "armor": 10, "speed": 8, "vision": 11,
+      "weapons": [
+        { "type": "disrupt", "damage": 50, "range": 1, "reload": 5, "projSpeed": 16 }
+      ]
+    },
+    "roach": {
+      "name": "Roach", "class": "naval",
+      "cost": 100, "buildTime": 8,
+      "hp": 120, "armor": 10, "speed": 6, "vision": 8,
+      "morph": true,
+      "produces": ["ravanger"],
+      "weapons": [
+        { "type": "torpedo", "damage": 15, "range": 6, "reload": 1.0, "projSpeed": 12, "targets": "naval" }
+      ]
+    },
+    "ravanger": {
+      "name": "Ravanger", "class": "naval",
+      "cost": 100, "buildTime": 3,
+      "hp": 80, "armor": 5, "speed": 7, "vision": 12,
+      "weapons": [
+        { "type": "torpedo", "damage": 10, "range": 7, "reload": 1, "projSpeed": 16, "targets": "naval" },
+        { "type": "disrupt", "damage": 75, "range": 10, "reload": 10, "projSpeed": 20 }
+      ]
+    },
+    "hydra": {
+      "name": "Hydralisk", "class": "naval",
+      "cost": 75, "buildTime": 8,
+      "hp": 50, "armor": 0, "speed": 7, "vision": 10,
+      "morph": true,
+      "produces": ["lurker"],
+      "weapons": [
+        { "type": "missile", "damage": 15, "range": 7, "reload": 0.5, "projSpeed": 18 }
+      ]
+    },
+    "lurker": {
+      "name": "Lurker", "class": "naval",
+      "cost": 175, "buildTime": 3,
+      "hp": 150, "armor": 15, "speed": 3, "vision": 13,
+      "weapons": [
+        { "type": "torpedo", "damage": 50, "range": 10, "reload": 1.5, "projSpeed": 16, "targets": "naval" }
+      ]
+    },
+    "ultra": {
+      "name": "Ultralisk", "class": "naval",
+      "cost": 500, "buildTime": 50,
+      "hp": 500, "armor": 10, "speed": 7, "vision": 12,
+      "weapons": [
+        { "type": "shell", "damage": 25, "range": 1.5, "reload": 0.5, "projSpeed": 8, "targets": "naval" },
+        { "type": "missile", "damage": 10, "range": 1.5, "reload": 0.5, "projSpeed": 8, "targets": "naval" }
+      ]
+    },
+    "infestor": {
+      "name": "Infestor", "class": "naval",
+      "cost": 350, "buildTime": 25,
+      "hp": 150, "armor": 0, "speed": 7, "vision": 12,
+      "weapons": [
+        { "type": "disrupt", "damage": 0, "range": 10, "reload": 0.3, "projSpeed": 8 }
+      ]
+    },
+    "mutalisk": {
+      "name": "Mutalisk", "class": "air",
+      "cost": 200, "buildTime": 15,
+      "hp": 100, "armor": 0, "speed": 7, "vision": 12,
+      "morph": true,
+      "produces": ["guardian"],
+      "weapons": [
+        { "type": "missile", "damage": 15, "range": 10, "reload": 1.5, "projSpeed": 20 }
+      ]
+    },
+    "guardian": {
+      "name": "Guardian", "class": "air",
+      "cost": 350, "buildTime": 25,
+      "hp": 150, "armor": 10, "speed": 4, "vision": 12,
+      "weapons": [
+        { "type": "torpedo", "damage": 40, "range": 10, "reload": 4, "projSpeed": 10, "targets": "naval" }
+      ]
+    },
+    "corrupter": {
+      "name": "Corrupter", "class": "air",
+      "cost": 250, "buildTime": 20,
+      "hp": 200, "armor": 15, "speed": 7, "vision": 12,
+      "morph": true,
+      "produces": ["broodlord"],
+      "weapons": [
+        { "type": "aa", "damage": 15, "range": 10, "reload": 2.5, "projSpeed": 18, "targets": "air" }
+      ]
+    },
+    "broodlord": {
+      "name": "Broodlord", "class": "air",
+      "cost": 350, "buildTime": 25,
+      "hp": 500, "armor": 20, "speed": 3, "vision": 12,
+      "larva": { "unit": "broodling", "max": 2, "interval": 2.5 }
+    },
+    "broodling": {
+      "name": "Broodling", "class": "naval",
+      "cost": 0, "buildTime": 1,
+      "hp": 10, "armor": 0, "speed": 10, "vision": 8,
+      "weapons": [
+        { "type": "shell", "damage": 2, "range": 5, "reload": 0.5, "projSpeed": 18 }
+      ]
+    }
+  },
+  "structures": {
+    "van_hq": {
+      "name": "Hive", "kind": "hq",
+      "cost": 0, "buildTime": 30,
+      "hp": 1800, "armor": 12, "vision": 14,
+      "weapons": [
+        { "type": "shell", "damage": 25, "range": 9, "reload": 0.5, "projSpeed": 12 },
+        { "type": "aa", "damage": 25, "range": 9, "reload": 1, "projSpeed": 14, "targets": "air" }
+      ],
+      "larva": { "unit": "larva", "max": 3, "interval": 11 }
+    },
+    "van_extractor": {
+      "name": "Creep Extractor", "kind": "extractor",
+      "cost": 0, "buildTime": 8,
+      "hp": 220, "armor": 2, "vision": 5
+    },
+    "van_colony": {
+      "name": "Lair", "kind": "colony",
+      "cost": 230, "buildTime": 15,
+      "hp": 800, "armor": 5, "vision": 9,
+      "larva": { "unit": "larva", "max": 3, "interval": 11 }
+    },
+    "van_colony_2": {
+      "name": "Spire", "kind": "defense",
+      "cost": 350, "buildTime": 25,
+      "hp": 800, "armor": 5, "vision": 9,
+      "larva": { "unit": "flying_larva", "max": 3, "interval": 11 }
+    },
+    "van_defense": {
+      "name": "Acid Pit", "kind": "defense",
+      "cost": 140, "buildTime": 14,
+      "hp": 550, "armor": 10, "vision": 12,
+      "weapons": [
+        { "type": "torpedo", "damage": 22, "range": 9, "reload": 1.8, "projSpeed": 12, "targets": "naval" },
+        { "type": "aa", "damage": 14, "range": 8, "reload": 1.0, "projSpeed": 14, "targets": "air" }
+      ]
+    }
+  }
+}

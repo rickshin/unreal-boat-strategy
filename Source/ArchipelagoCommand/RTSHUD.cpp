@@ -112,7 +112,19 @@ void ARTSHUD::DrawSelectionPanel()
 			TextDim, 12.f, PanelY + 26.f, Font);
 	}
 
-	// Options: production list or builder's structure list.
+	// Morphing? Show the cocoon's progress instead of buttons.
+	if (const FMorphC* MC = G.World.Morph.Find(First))
+	{
+		const FUnitTpl* T = G.Content.Unit(G.Players[Me].FactionId, MC->Target);
+		const float Frac = FMath::Clamp(MC->Elapsed / MC->Duration, 0.f, 1.f);
+		DrawText(FString::Printf(TEXT("Morphing into %s"), T ? *T->Name : TEXT("?")),
+			TextMain, 200.f, PanelY + 8.f, Font);
+		DrawRect(FLinearColor(0.08f, 0.10f, 0.12f), 200.f, PanelY + 28.f, 300.f, 10.f);
+		DrawRect(GoodGreen, 200.f, PanelY + 28.f, 300.f * Frac, 10.f);
+		return;
+	}
+
+	// Options: production list, builder's structure list, or morph targets.
 	TArray<FName> Options;
 	const FProdC* Prod = nullptr;
 	bool bBuilder = false;
@@ -120,12 +132,11 @@ void ARTSHUD::DrawSelectionPanel()
 	{
 		if ((Prod = G.World.Prod.Find(E)) != nullptr) { Options = Prod->Options; break; }
 		const FUnitC* U = G.World.Unit.Find(E);
-		if (U && U->bBuilder)
-		{
-			const FUnitTpl* T = G.Content.Unit(G.Players[Me].FactionId, U->Tpl);
-			if (T) { Options = T->Builds; bBuilder = true; }
-			break;
-		}
+		if (!U) { continue; }
+		const FUnitTpl* T = G.Content.Unit(G.Players[Me].FactionId, U->Tpl);
+		if (!T) { continue; }
+		if (U->bBuilder && T->Builds.Num() > 0) { Options = T->Builds; bBuilder = true; break; }
+		if (T->bMorph && T->MorphInto.Num() > 0) { Options = T->MorphInto; break; }
 	}
 
 	const float BtnW = 148.f, BtnH = 40.f, Gap = 8.f;

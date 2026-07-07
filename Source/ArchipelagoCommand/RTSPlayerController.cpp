@@ -568,6 +568,29 @@ void ARTSPlayerController::OnUIButton(int32 Index)
 			return;
 		}
 	}
+
+	// Morphers: every selected unit sharing the first unit's morph option
+	// transforms together (SC2-style batch morph).
+	TArray<FEntityId> Morphers;
+	FName MorphTarget;
+	for (const FEntityId E : Selection)
+	{
+		const FUnitC* U = G.World.Unit.Find(E);
+		if (!U || G.World.Morph.Contains(E)) { continue; }
+		const FUnitTpl* T = G.Content.Unit(G.Players[Me].FactionId, U->Tpl);
+		if (!T || !T->bMorph || Index >= T->MorphInto.Num()) { continue; }
+		if (MorphTarget.IsNone()) { MorphTarget = T->MorphInto[Index]; }
+		if (T->MorphInto[Index] == MorphTarget) { Morphers.Add(E); }
+	}
+	if (Morphers.Num() > 0)
+	{
+		FSimCommand Cmd;
+		Cmd.Type = ECmdType::Morph;
+		Cmd.Player = Me;
+		Cmd.Units = Morphers;
+		Cmd.TplId = MorphTarget;
+		Mode->QueueCommand(Cmd);
+	}
 }
 
 void ARTSPlayerController::AxisCameraX(float V) { CameraAxis.Y = V; }

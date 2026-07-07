@@ -46,6 +46,11 @@ struct FUnitTpl
 	float GasCapacity = 100.f;// harvester: KiTrin per load
 	float DockTime = 10.f;    // harvester: seconds attached to the tube
 	FString FireSound;        // Audio/effects/<name>.mp3 on every shot (render-only)
+	bool bMorph = false;      // can transform into another unit (Zerg-style)
+	TArray<FName> MorphInto;  // morph targets ("produces" list when morph=true)
+	FName SpawnUnit;          // auto-breeds this unit (e.g. Broodlord -> broodlings)...
+	int32 SpawnMax = 0;       // ...up to this many nearby...
+	float SpawnInterval = 10.f; // ...one every this many seconds
 	TArray<FWeaponTpl> Weapons;
 	TArray<FName> Builds;     // builder: structure ids; carrier: aircraft ids
 	int32 Value() const { return Cost; }
@@ -62,6 +67,9 @@ struct FStructTpl
 	int32 Cost = 0;           // KiTrin
 	float BuildTime = 15.f;
 	FString FireSound;        // Audio/effects/<name>.mp3 on every shot (render-only)
+	FName SpawnUnit;          // larva breeding: unit id...
+	int32 SpawnMax = 0;       // ...cap of live children nearby...
+	float SpawnInterval = 10.f; // ...seconds per spawn
 	TArray<FName> Produces;   // unit ids
 	TArray<FWeaponTpl> Weapons;
 };

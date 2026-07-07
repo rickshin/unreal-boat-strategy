@@ -80,7 +80,8 @@ Session flags (append to the `-game` command line):
 
 ```
 -Seed=7               # any seed = a new archipelago (printed in the top bar)
--Faction=tempest      # play the swarm faction (default: dominion)
+-Faction=tempest      # or vanguard: any faction json in Content/Data
+-Enemy=vanguard       # choose the AI's faction too
 -Difficulty=easy      # gentler AI (easy | normal | hard)
 -Spectate             # watch AI vs AI with full vision
 -ClassicOcean         # procedural Gerstner sea instead of the Water plugin
@@ -192,8 +193,12 @@ Gameplay concepts (unchanged from the original design):
 
 - **Factions** — *Dominion Armada* (durable, expensive, slow: battleships,
   carriers, repair vessels, fortified HQ) vs *Tempest Swarm* (fast, cheap,
-  fragile: skimmer swarms, torpedoes, EW disruption). Stats in
-  `Content/Data/dominion.json` / `tempest.json`.
+  fragile: skimmer swarms, torpedoes, EW disruption) vs *Vanguard Swarm*
+  (Zerg-style: the Hive breeds free larvae that **morph** — the morphing
+  unit is consumed and becomes the target after its build time — up chains
+  like roach→ravanger and corrupter→broodlord; Broodlords breed their own
+  broodlings). Stats in `Content/Data/*.json`; morphs pay the target's
+  cost, and cocoons can neither move nor fight.
 - **Economy** — a single resource: **KiTrin**, a shining orange gas
   vented by island geysers (glowing, star-spraying vents on the coasts);
   it can be shaped into nearly anything, so everything costs KiTrin.

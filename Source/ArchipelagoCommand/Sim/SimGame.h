@@ -91,6 +91,25 @@ struct FHarvestC
 // A deployed crawler: walks to its geyser and becomes the extractor.
 struct FCrawlC { int32 NodeId = -1; };
 
+// Zerg-style morph in progress: the unit is a sessile cocoon until the
+// timer runs out, then it is consumed and the target unit takes its place.
+struct FMorphC
+{
+	FName Target;
+	float Elapsed = 0.f;
+	float Duration = 5.f;
+};
+
+// Auto-breeder (Hive larvae, Broodlord broodlings): spawns SpawnUnit on a
+// timer while fewer than SpawnMax of them live within the leash radius.
+struct FSpawnerC
+{
+	FName Unit;
+	int32 Max = 3;
+	int32 IntervalTicks = 200;
+	int32 Cooldown = 0;
+};
+
 struct FRepairC { float Rate = 15.f; float Range = 4.f; };
 
 struct FVisionC { float Radius = 8.f; };
@@ -143,6 +162,8 @@ struct FSimWorld
 	TMap<FEntityId, FProdC> Prod;
 	TMap<FEntityId, FHarvestC> Harvest;
 	TMap<FEntityId, FCrawlC> Crawl;
+	TMap<FEntityId, FMorphC> Morph;
+	TMap<FEntityId, FSpawnerC> Spawner;
 	TMap<FEntityId, FRepairC> Repair;
 	TMap<FEntityId, FVisionC> Vision;
 	TMap<FEntityId, FProjC> Proj;
@@ -156,7 +177,8 @@ struct FSimWorld
 		Alive.Remove(Id);
 		Pos.Remove(Id); Own.Remove(Id); Unit.Remove(Id); Struct.Remove(Id);
 		Health.Remove(Id); Mover.Remove(Id); Combat.Remove(Id); Prod.Remove(Id);
-		Harvest.Remove(Id); Crawl.Remove(Id); Repair.Remove(Id); Vision.Remove(Id);
+		Harvest.Remove(Id); Crawl.Remove(Id); Morph.Remove(Id); Spawner.Remove(Id);
+		Repair.Remove(Id); Vision.Remove(Id);
 		Proj.Remove(Id); BuildTask.Remove(Id); Manual.Remove(Id);
 	}
 
@@ -172,6 +194,7 @@ enum class ECmdType : uint8
 {
 	Move, Attack, AttackMove, Stop, Produce, Build,
 	Harvest,         // TargetEid = geyser (node) id; Units = harvesters
+	Morph,           // TplId = what Units (each paying its cost) become
 	ManualControl,   // bFlag = take/release direct control of Units[0]
 	ManualInput      // Target = (fwd,strafe) axes, FacingRad, bFlag = fire held
 };

@@ -85,6 +85,12 @@ FEntityId FSimGame::SpawnUnit(int32 Player, FName TplId, const FVector2f& At)
 	}
 	if (T->RepairRate > 0.f) { World.Repair.Add(E, { T->RepairRate, 4.f }); }
 	if (T->bHarvester) { World.Harvest.Add(E, FHarvestC()); }
+	if (!T->SpawnUnit.IsNone())
+	{
+		World.Spawner.Add(E, { T->SpawnUnit, T->SpawnMax,
+			FMath::Max(1, FMath::RoundToInt32(T->SpawnInterval * SIM_TICKS_PER_SEC)),
+			FMath::Max(1, FMath::RoundToInt32(T->SpawnInterval * SIM_TICKS_PER_SEC)) });
+	}
 	if (T->Builds.Num() > 0 && !T->bBuilder)   // carrier: produces aircraft
 	{
 		FProdC Prod;
@@ -122,6 +128,12 @@ FEntityId FSimGame::SpawnStructure(int32 Player, FName TplId, const FVector2f& A
 		FProdC Prod;
 		Prod.Options = T->Produces;
 		World.Prod.Add(E, MoveTemp(Prod));
+	}
+	if (bComplete && !T->SpawnUnit.IsNone())
+	{
+		World.Spawner.Add(E, { T->SpawnUnit, T->SpawnMax,
+			FMath::Max(1, FMath::RoundToInt32(T->SpawnInterval * SIM_TICKS_PER_SEC)),
+			FMath::Max(1, FMath::RoundToInt32(T->SpawnInterval * SIM_TICKS_PER_SEC)) });
 	}
 	if (T->Kind == EStructureKind::Extractor)
 	{

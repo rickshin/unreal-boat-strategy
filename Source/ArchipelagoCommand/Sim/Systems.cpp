@@ -206,6 +206,44 @@ void SimSys::RunCommands(FSimGame& G)
 			Prod->Queue.Add(Cmd.TplId);
 			break;
 		}
+		case ECmdType::Morph:
+		{
+			// Each unit pays the target's cost and becomes a cocoon; the
+			// swap happens in Economy when the timer completes.
+			const FUnitTpl* Target = G.Content.Unit(G.Players[Cmd.Player].FactionId, Cmd.TplId);
+			if (!Target) { break; }
+			for (const FEntityId Eid : Cmd.Units)
+			{
+				const FOwnerC* O = G.World.Own.Find(Eid);
+				const FUnitC* U = G.World.Unit.Find(Eid);
+				if (!O || O->Player != Cmd.Player || !U) { continue; }
+				if (G.World.Morph.Contains(Eid)) { continue; }   // already cocooned
+				const FUnitTpl* Self = G.Content.Unit(G.Players[Cmd.Player].FactionId, U->Tpl);
+				if (!Self || !Self->bMorph || !Self->MorphInto.Contains(Cmd.TplId)) { continue; }
+				if (!G.CanAfford(Cmd.Player, Target->Cost))
+				{
+					if (!G.Players[Cmd.Player].bIsAI)
+					{
+						G.PushEvent(FSimEvent::EKind::ProductionDone, Cmd.Player,
+							FVector2f::ZeroVector, TEXT("Not enough resources"));
+					}
+					break;   // no point trying the rest of the selection
+				}
+				G.PayCost(Cmd.Player, Target->Cost);
+				G.World.Morph.Add(Eid, { Cmd.TplId, 0.f, FMath::Max(0.5f, Target->BuildTime) });
+				// Cocoons hold still and stop fighting.
+				if (FMoverC* M = G.World.Mover.Find(Eid))
+				{
+					M->Order = EMoveOrder::Idle;
+					M->Waypoints.Reset();
+					M->ChaseTarget = INVALID_ENTITY;
+				}
+				if (FCombatC* C = G.World.Combat.Find(Eid)) { C->Target = INVALID_ENTITY; }
+				if (FHarvestC* HC = G.World.Harvest.Find(Eid)) { HC->State = EHarvestState::None; }
+				G.World.Manual.Remove(Eid);
+			}
+			break;
+		}
 		case ECmdType::ManualControl:
 		{
 			if (Cmd.Units.Num() == 0) { break; }
@@ -346,6 +384,58 @@ void SimSys::RunEconomy(FSimGame& G)
 			}
 		}
 		G.World.Destroy(Eid);   // the crawler is consumed by the deployment
+	}
+
+	// Morph cocoons: when the timer completes, the old unit is consumed
+	// and the target unit takes its place (position and facing carry over).
+	for (const FEntityId Eid : SimSortedKeys(G.World.Morph))
+	{
+		if (!G.World.IsAlive(Eid)) { continue; }
+		FMorphC& M = G.World.Morph[Eid];
+		M.Elapsed += SIM_DT;
+		if (M.Elapsed < M.Duration) { continue; }
+		const int32 Player = G.World.Own[Eid].Player;
+		const FPosC Pos = G.World.Pos[Eid];   // copy before destruction
+		const FName Target = M.Target;
+		G.World.Destroy(Eid);
+		const FEntityId NewEid = G.SpawnUnit(Player, Target, Pos.P);
+		if (NewEid != INVALID_ENTITY)
+		{
+			G.World.Pos[NewEid].Facing = Pos.Facing;
+			if (!G.Players[Player].bIsAI)
+			{
+				const FUnitTpl* T = G.Content.Unit(G.Players[Player].FactionId, Target);
+				G.PushEvent(FSimEvent::EKind::ProductionDone, Player, Pos.P,
+					FString::Printf(TEXT("%s morph complete"), T ? *T->Name : TEXT("Unit")));
+			}
+		}
+	}
+
+	// Breeders (Hive larvae, Broodlord broodlings): spawn a child when the
+	// timer fires and fewer than Max of them live within the leash radius.
+	for (const FEntityId Eid : SimSortedKeys(G.World.Spawner))
+	{
+		if (!G.World.IsAlive(Eid)) { continue; }
+		FSpawnerC& Sp = G.World.Spawner[Eid];
+		if (--Sp.Cooldown > 0) { continue; }
+		Sp.Cooldown = Sp.IntervalTicks;
+		const FStructC* S = G.World.Struct.Find(Eid);
+		if (S && !S->bComplete) { continue; }
+		const int32 Player = G.World.Own[Eid].Player;
+		const FPosC* P = G.World.Pos.Find(Eid);
+		if (!P) { continue; }
+		int32 Nearby = 0;
+		for (const auto& Pair : G.World.Unit)
+		{
+			if (Pair.Value.Tpl != Sp.Unit) { continue; }
+			const FOwnerC* O = G.World.Own.Find(Pair.Key);
+			const FPosC* OP = G.World.Pos.Find(Pair.Key);
+			if (O && O->Player == Player && OP && (OP->P - P->P).Size() < 6.f) { ++Nearby; }
+		}
+		if (Nearby < Sp.Max)
+		{
+			G.SpawnUnit(Player, Sp.Unit, FindSpawnSlot(G, P->P));
+		}
 	}
 
 	// Flying gas harvesters: fly to the geyser, deploy a crawler if the
@@ -537,6 +627,7 @@ void SimSys::RunMovement(FSimGame& G)
 {
 	for (const FEntityId Eid : SimSortedKeys(G.World.Mover))
 	{
+		if (G.World.Morph.Contains(Eid)) { continue; }   // cocoons are sessile
 		FMoverC& M = G.World.Mover[Eid];
 		FPosC& P = G.World.Pos[Eid];
 		const FUnitC& U = G.World.Unit[Eid];
@@ -721,6 +812,7 @@ void SimSys::RunCombat(FSimGame& G)
 		}
 		const FStructC* S = G.World.Struct.Find(Eid);
 		if (S && !S->bComplete) { continue; }
+		if (G.World.Morph.Contains(Eid)) { continue; }   // cocoons don't fight
 		const FPosC* P = G.World.Pos.Find(Eid);
 		if (!P) { continue; }
 		const int32 Player = G.World.Own[Eid].Player;

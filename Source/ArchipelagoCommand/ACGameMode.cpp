@@ -63,10 +63,17 @@ void AACGameMode::BeginPlay()
 	uint64 Seed = uint64(FPlatformTime::Cycles64() & 0xFFFFFF);
 	FParse::Value(CmdLine, TEXT("Seed="), Seed);
 	FString FactionStr;
-	if (FParse::Value(CmdLine, TEXT("Faction="), FactionStr) && FactionStr.Equals(TEXT("tempest"), ESearchCase::IgnoreCase))
+	if (FParse::Value(CmdLine, TEXT("Faction="), FactionStr) && !FactionStr.IsEmpty())
 	{
-		PlayerFaction = TEXT("tempest");
-		EnemyFaction = TEXT("dominion");
+		// Any faction json in Content/Data works: -Faction=vanguard etc.
+		PlayerFaction = FName(*FactionStr.ToLower());
+		EnemyFaction = (PlayerFaction == FName(TEXT("dominion")))
+			? FName(TEXT("tempest")) : FName(TEXT("dominion"));
+	}
+	FString EnemyStr;
+	if (FParse::Value(CmdLine, TEXT("Enemy="), EnemyStr) && !EnemyStr.IsEmpty())
+	{
+		EnemyFaction = FName(*EnemyStr.ToLower());
 	}
 	FString DiffStr;
 	if (FParse::Value(CmdLine, TEXT("Difficulty="), DiffStr))

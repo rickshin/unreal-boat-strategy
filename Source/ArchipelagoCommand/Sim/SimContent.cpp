@@ -135,6 +135,17 @@ bool FContentDB::LoadFromDir(const FString& Dir)
 			T.FireSound = U->HasField(TEXT("fireSound")) ? U->GetStringField(TEXT("fireSound")) : FString();
 			T.Weapons = ParseWeapons(U);
 			T.Builds = ParseNameArray(U, TEXT("builds"));
+			// Morphers: "produces" lists what this unit can become.
+			T.bMorph = U->HasField(TEXT("morph")) && U->GetBoolField(TEXT("morph"));
+			if (T.bMorph) { T.MorphInto = ParseNameArray(U, TEXT("produces")); }
+			// Breeders: auto-spawn children up to a cap (Broodlord-style).
+			const TSharedPtr<FJsonObject>* Larva;
+			if (U->TryGetObjectField(TEXT("larva"), Larva))
+			{
+				T.SpawnUnit = FName(*(*Larva)->GetStringField(TEXT("unit")));
+				T.SpawnMax = int32((*Larva)->GetNumberField(TEXT("max")));
+				T.SpawnInterval = (*Larva)->GetNumberField(TEXT("interval"));
+			}
 			F.Units.Add(T.Id, T);
 		}
 
@@ -154,6 +165,13 @@ bool FContentDB::LoadFromDir(const FString& Dir)
 			T.FireSound = S->HasField(TEXT("fireSound")) ? S->GetStringField(TEXT("fireSound")) : FString();
 			T.Weapons = ParseWeapons(S);
 			T.Produces = ParseNameArray(S, TEXT("produces"));
+			const TSharedPtr<FJsonObject>* Larva;
+			if (S->TryGetObjectField(TEXT("larva"), Larva))
+			{
+				T.SpawnUnit = FName(*(*Larva)->GetStringField(TEXT("unit")));
+				T.SpawnMax = int32((*Larva)->GetNumberField(TEXT("max")));
+				T.SpawnInterval = (*Larva)->GetNumberField(TEXT("interval"));
+			}
 			F.Structures.Add(T.Id, T);
 		}
 
