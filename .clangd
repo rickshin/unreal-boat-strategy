@@ -1,0 +1,7 @@
+# clangd tuning for this UE project: the compilation database sits in the
+# project root (regenerate with UBT -mode=GenerateClangDatabase after adding
+# files). Suppress warnings from engine headers we cannot change.
+CompileFlags:
+  Add: [-Wno-unknown-warning-option]
+Index:
+  Background: Build
