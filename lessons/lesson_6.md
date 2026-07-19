@@ -3,8 +3,9 @@
 Here's a secret about this game: the C++ code doesn't know what a
 "Battleship" is. Search all of `Sim/` — the word appears nowhere. The
 code only knows *rules*: things have hit points, weapons have ranges,
-armor reduces damage. **What things exist** lives entirely in two JSON
-files: `Content/Data/dominion.json` and `Content/Data/tempest.json`.
+armor reduces damage. **What things exist** lives entirely in the JSON
+files in `Content/Data/` — `dominion.json`, `tempest.json`, and
+`vanguard.json` (yes, a whole third faction is just another file).
 
 This is called **data-driven design**, and it's why you can add a whole
 new warship to the game today, in ten minutes, without compiling
@@ -15,7 +16,7 @@ anything.
 ```json
 "destroyer": {
   "name": "Destroyer", "class": "naval", "hp": 520, "armor": 5,
-  "speed": 2.6, "vision": 9, "cost": { "wood": 90, "iron": 140 }, "buildTime": 22,
+  "speed": 2.6, "vision": 9, "cost": 185, "buildTime": 22,
   "weapons": [
     { "type": "shell", "damage": 22, "range": 7.0, "reload": 1.8, "projSpeed": 15 },
     { "type": "aa", "damage": 7, "range": 6.0, "reload": 0.8, "projSpeed": 20, "targets": "air" }
@@ -23,8 +24,9 @@ anything.
 }
 ```
 
-- `class`: `"naval"` (a boat), `"air"` (aircraft), `"builder"` (can
-  place structures).
+- `class`: `"naval"` (a boat), `"air"` (aircraft), `"harvester"` (the
+  flying gas-worker, which doubles as the builder), `"ground"` (geyser
+  crawlers).
 - `speed`/`range`/`vision` are in **cells per second / cells** — sim
   units, remember lesson 4.
 - `weapons` is a list — the destroyer has a main gun *and* an AA gun,
@@ -77,8 +79,8 @@ mitigation = min(0.6, 0.3) = 30% → final = **7.0** damage.
 ## Balance: the invisible game design
 
 Numbers aren't free. A rough fairness rule this game's data follows:
-**power ≈ cost.** A unit's `Value` (wood+iron) should roughly buy its
-combination of toughness (hp × armor effect) and hurt
+**power ≈ cost.** A unit's `Value` (its KiTrin cost) should roughly buy
+its combination of toughness (hp × armor effect) and hurt
 (damage/reload × range). The Tempest faction *deliberately* pays less
 for more speed and less hp — fragile-but-fast is their identity.
 When you invent a unit, you're not just editing JSON; you're doing
@@ -113,7 +115,7 @@ Put it back.
 
 **Challenge 6.4 — Design review (paper).**
 A friend proposes: `"speed": 6.0, "hp": 900, "armor": 7,`
-`"cost": {"wood": 60, "iron": 40}`, one torpedo weapon, damage 45,
+`"cost": 100`, one torpedo weapon, damage 45,
 range 9, reload 1.0. Using the fairness rule and what you know about
 existing units, write three sentences on why this breaks the game, and
 propose fixed numbers that keep the *idea* (a tanky torpedo boat) fair.

@@ -49,7 +49,7 @@ Add to **both** faction JSONs (Dominion version shown; invent your own
 Tempest name — Coral Beacon?):
 
 - id `lighthouse`, kind `"lighthouse"`, hp ~250, armor 1,
-  **vision 14**, cost ~40 wood / 10 iron, buildTime ~10, no weapons.
+  **vision 14**, cost ~50 KiTrin, buildTime ~10, no weapons.
 - Add `"lighthouse"` to each builder's `"builds"` list.
 
 Restart and *test the sim half*: you should already be able to build it
@@ -69,7 +69,7 @@ sphere (look at how the HQ does its gold sphere). Set a sensible
 
 **Stage 5 — Playtest like a designer.**
 Build lighthouses on the sea lanes toward your base. Does the AI's
-attack wave now show up on your minimap 20 seconds earlier? Is 40 wood
+attack wave now show up on your minimap 20 seconds earlier? Is 50 KiTrin
 too cheap for that power? (What would a pro player do — spam them on
 every island? Is that fun or degenerate?) Adjust one number and say
 why. There is no solution-file answer to "is it balanced" — welcome to

@@ -8,7 +8,7 @@ is correct too.
 `Sim/SimTypes.h`:
 
 ```cpp
-enum class EStructureKind : uint8 { HQ, MinerWood, MinerIron, Outpost, Colony, Defense, Lighthouse };
+enum class EStructureKind : uint8 { HQ, Extractor, Outpost, Colony, Defense, Lighthouse };
 ```
 
 (New value goes at the **end** — the enum is stored as `uint8` in
@@ -57,7 +57,7 @@ credit; next time there's only *one* place to update.)
 ```json
 "lighthouse": {
   "name": "Lighthouse", "kind": "lighthouse", "hp": 250, "armor": 1, "vision": 14,
-  "cost": { "wood": 40, "iron": 10 }, "buildTime": 10
+  "cost": 50, "buildTime": 10
 }
 ```
 
@@ -68,7 +68,7 @@ Builder: `"builds": [..., "defense_platform", "lighthouse"]`
 ```json
 "coral_beacon": {
   "name": "Coral Beacon", "kind": "lighthouse", "hp": 220, "armor": 0, "vision": 14,
-  "cost": { "wood": 35, "iron": 10 }, "buildTime": 9
+  "cost": 45, "buildTime": 9
 }
 ```
 
@@ -103,9 +103,9 @@ case EStructureKind::Lighthouse:
 
 ## Stage 5 — a real playtest note (yours will differ)
 
-At 40 wood, one lighthouse per sea lane is automatic — too automatic;
-it's never a *decision*. Raising to 60 wood put it in genuine
-competition with "half a mining rig," which made placing one feel like
+At 50 KiTrin, one lighthouse per sea lane is automatic — too automatic;
+it's never a *decision*. Raising to 75 put it in genuine competition
+with "half a warship," which made placing one feel like
 a choice. Kept vision 14: the fun of the unit *is* the absurd sight
 range; nerfing that would delete the identity instead of the excess.
 General principle: balance by making costs hurt, not by making the

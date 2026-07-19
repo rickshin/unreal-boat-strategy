@@ -9,12 +9,12 @@ int32 Threshold = 120 + Minutes * 40;
 First wave arrives around the 1–2 minute mark — a handful of skimmers
 or patrol boats. If you hold it (defense platform / your starting
 escorts + first production), the rush strategy collapses on its own
-economics: the AI spent its early wood on doomed warships instead of
-miners, so *your* economy is now permanently ahead, and its next waves
+economics: the AI spent its early KiTrin on doomed warships instead of
+harvesters, so *your* economy is now permanently ahead, and its next waves
 (rebuilt from a weaker economy against your growing defense) arrive
 smaller relative to you each time. Rushing is all-in: it wins now or it
 loses later. This is true in real RTS games, and now you've seen why in
-the code — every unit produced is a mining rig not built.
+the code — every warship morphed or built is a harvester that wasn't.
 
 **8.2 — The coward patch.**
 
@@ -34,7 +34,7 @@ strengths before fleeing. (Feel free to try writing that as a bonus.)
 
 **8.3 — Kneecap the mayor.**
 Failure chain, in order: (1) The AI mines out its home island's 2–3
-nodes — wood first, usually ~4–6 minutes in. (2) Income flatlines;
+geysers, usually several minutes in. (2) Income flatlines;
 `CanAfford` starts failing in the production step, so queues sit empty.
 (3) The general's army value stops growing, never reaches the rising
 threshold (`350 + Minutes*120` keeps climbing!), so waves *stop
@@ -73,21 +73,25 @@ inside the expansion block, choose the template by wealth:
 
 ```cpp
 // 2) Expansion: outpost normally, full colony when wealthy.
-const int32 Miners = CountStructures(G, Player, EStructureKind::MinerWood)
-    + CountStructures(G, Player, EStructureKind::MinerIron);
-if (Miners >= 2)
+int32 Harvesters = 0;   // count own units with a Harvest component
+for (const FEntityId Eid : SimSortedKeys(G.World.Harvest))
+{
+    const FOwnerC* O = G.World.Own.Find(Eid);
+    if (O && O->Player == Player) { ++Harvesters; }
+}
+if (Harvesters >= 2)
 {
     FName ColonyId;
     for (const auto& Pair : F.Structures)
     {
         if (Pair.Value.Kind == EStructureKind::Colony) { ColonyId = Pair.Key; }
     }
-    const bool bRich = Pl.Wood >= 300.f && !ColonyId.IsNone();
+    const bool bRich = Pl.KiTrin >= 300.f && !ColonyId.IsNone();
     const FName ExpandTpl = bRich ? ColonyId : OutpostId;
     if (!ExpandTpl.IsNone())
     {
         const FStructTpl* T = G.Content.Structure(Pl.FactionId, ExpandTpl);
-        if (T && G.CanAfford(Player, T->CostWood + 40, T->CostIron))
+        if (T && G.CanAfford(Player, T->Cost + 40))
         {
             // ... (identical island search + IsValidBuildSite + Build
             //      command as the existing outpost code, using ExpandTpl)

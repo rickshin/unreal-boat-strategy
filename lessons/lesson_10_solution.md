@@ -82,7 +82,7 @@ unit-branch body (the part that picks aircraft vs boat):
 ```json
 "patrol_boat": {
   "name": "Patrol Boat", "class": "naval", "hp": 260, "armor": 2,
-  "speed": 3.4, "vision": 8, "cost": { "wood": 50, "iron": 30 }, "buildTime": 10,
+  "speed": 3.4, "vision": 8, "cost": 65, "buildTime": 10,
   "mesh": "/Game/Models/ship_dark.ship_dark", "meshScale": 4.5, "meshYaw": -90,
   "weapons": [ ... unchanged ... ]
 }

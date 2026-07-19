@@ -7,12 +7,11 @@ In `Sim/SimGame.h`, struct `FSimPlayer`:
 struct FSimPlayer
 {
     FName FactionId;
-    float Wood = 1000.f;   // was 200.f
-    float Iron = 1000.f;   // was 100.f
+    float KiTrin = 1000.f;   // was 150.f
     ...
 ```
 
-Rebuild, run, and the top bar shows `Wood 1000  Iron 1000`. Notice the
+Rebuild, run, and the top bar shows `KiTrin 1000`. Notice the
 AI got rich too — the defaults apply to *both* players, because both are
 `FSimPlayer`s. (Remember to change it back!)
 

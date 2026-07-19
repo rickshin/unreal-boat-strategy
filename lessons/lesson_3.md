@@ -78,7 +78,7 @@ system. In pseudocode:
 for every entity that has a Health component (in ID order!):
     if hp <= 0: remember it as dead
 for every dead entity:
-    release the things it owned (island claims, mining nodes)
+    release the things it owned (island claims, geyser claims)
     if it was someone's HQ: that player is defeated
     delete all its components
 if someone is defeated: the other player wins
@@ -109,7 +109,7 @@ per system per tick, which at ~200 entities is nothing.
 Find `FSimGame::SpawnUnit` in `Sim/SimGame.cpp`. Watch it work: grab a
 fresh ID from `World.Create()`, then `Add` a component to each map the
 unit needs — position, owner, health, mover, vision — and only add
-`Combat` if the template actually has weapons. A worker barge simply
+`Combat` if the template actually has weapons. A geyser crawler simply
 never gets a `Combat` component, which is *why* it can't shoot. Delete
 a component and the ability disappears. That's ECS.
 
@@ -134,14 +134,15 @@ second means `* SIM_DT` per tick. Test by damaging a boat in a fight,
 pulling it back, and watching its health bar crawl up.
 
 **Challenge 3.3 — Paper design (no code).**
-You want cargo ships that can carry 50 wood across the map (loaded at
-one island, unloaded at another). Design the component: what fields
+You want cargo ships that can carry 50 KiTrin across the map (loaded
+at one island, unloaded at another). Design the component: what fields
 would `FCargoC` have? Which *existing* systems would need to know about
 it, and which new system (if any) would you write? Discuss with Dad;
 compare with the solution.
 
 **Challenge 3.4 — Spot the missing component.**
 The HQ shoots back when attacked (it has weapons in its JSON), but a
-Timber Rig doesn't. Using only what you learned about `SpawnStructure`
-in `SimGame.cpp`, explain *mechanically* why the rig never fires — which
-component does it not receive, and which line of code decides that?
+gas extractor doesn't. Using only what you learned about
+`SpawnStructure` in `SimGame.cpp`, explain *mechanically* why the
+extractor never fires — which component does it not receive, and which
+line of code decides that?

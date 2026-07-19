@@ -59,8 +59,7 @@ A reasonable design:
 struct FCargoC
 {
     int32 Capacity = 50;
-    int32 CarriedWood = 0;
-    int32 CarriedIron = 0;
+    int32 CarriedKiTrin = 0;
     FEntityId LoadFrom = INVALID_ENTITY;    // structure to pick up at
     FEntityId DeliverTo = INVALID_ENTITY;   // structure to drop at
 };
@@ -75,7 +74,7 @@ like anyone else. If your design didn't need to touch Movement or
 Combat, you've understood ECS: new features mostly mean one new
 component plus small additions to the systems that care.
 
-**3.4 — The rig that couldn't shoot.**
+**3.4 — The extractor that couldn't shoot.**
 In `FSimGame::SpawnStructure`:
 
 ```cpp
@@ -88,9 +87,9 @@ if (bComplete && T->Weapons.Num() > 0)
 ```
 
 The `Combat` component is only added **if the template's JSON lists
-weapons**. `timber_rig` in `dominion.json` has no `"weapons"` array, so
-`T->Weapons.Num() > 0` is false, so the rig never receives a `Combat`
-component — and `RunCombat` loops over `World.Combat`, so the rig is
+weapons**. `gas_extractor` in `dominion.json` has no `"weapons"` array, so
+`T->Weapons.Num() > 0` is false, so the extractor never receives a
+`Combat` component — and `RunCombat` loops over `World.Combat`, so it is
 simply never visited. It can't shoot for the same reason a rock can't:
 it lacks the component. (Bonus insight: give it weapons in JSON and it
 *would* shoot, no C++ needed. That's lesson 6.)

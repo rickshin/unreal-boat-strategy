@@ -1,6 +1,6 @@
 # Lesson 1 — The Big Picture: How This Game Is Put Together
 
-Welcome, Commander! Over these 9 lessons you'll learn how **Archipelago
+Welcome, Commander! Over these 14 lessons you'll learn how **Archipelago
 Command** works on the inside — well enough to change it, break it, fix
 it, and add your own ideas to it.
 

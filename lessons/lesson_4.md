@@ -64,7 +64,7 @@ The referee owns **one** `FSimRng` (`FSimGame::Rng`) and *everything*
 random in the rules draws from it, in the same order, every run.
 
 The TV crew is *forbidden* from touching those dice. Fish, rocks, and
-kelp use Unreal's `FRandomStream` with their own seeds (look at
+geyser decorations use Unreal's `FRandomStream` with their own seeds (look at
 `OceanActor.cpp`: `FRandomStream FishRng(1337)`), because if drawing a
 fish consumed a number from the referee's dice, the sequence would
 shift and *the whole game would change because you looked at a fish.*

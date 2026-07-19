@@ -34,16 +34,17 @@ API.)
 
 Read `Strategic()` top to bottom; it's a priority list —
 
-1. **Economy first:** if a builder is free and an unclaimed resource
-   node is nearby and affordable → order a mining rig on it. *One
-   action per pass, then return* — a small trick that keeps behavior
-   calm and debuggable.
-2. **Then expansion:** with 2+ miners running, claim the nearest free
-   island with an outpost.
-3. **Then the army:** keep every production queue busy, rotating
-   through affordable options (`CompositionCursor`) so it builds a
-   *mix* instead of 40 identical boats, and saving iron before
-   splurging on capital ships.
+1. **Economy first:** send every idle Gas Harvester to the nearest
+   live geyser (reserving one harvester as a builder when an outpost
+   is affordable), and breed more harvesters when the fleet is short —
+   the target is 2 plus one per owned island.
+2. **Then expansion:** with 2+ harvesters ferrying gas, claim the
+   nearest free island with an outpost.
+3. **Then the army:** keep every production queue busy — and for
+   morph factions, treat idle larvae as the queue — rotating through
+   affordable options (`CompositionCursor`) so it builds a *mix*
+   instead of 40 identical boats, and saving up before splurging on
+   capital ships.
 
 ## The general: Operational
 
@@ -123,7 +124,7 @@ home."
 
 **Challenge 8.5 (stretch, real feature) — Teach the mayor colonies.**
 Strategic never builds a Colony even though the data supports it. Add
-step 2.5: if the AI owns 2+ islands, has 300+ wood, and a free builder,
+step 2.5: if the AI owns 2+ islands, has 300+ KiTrin, and a free builder,
 place a colony next to an owned island *that doesn't already have one*.
 Hints: you can find owned islands via `G.Map.Islands` and
 `Isl.OwnerPlayer == Player`; validity is the same

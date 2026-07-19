@@ -22,7 +22,7 @@ what matters is the 1v1 results):
 ```json
 "hydra_gunboat": {
   "name": "Hydra Gunboat", "class": "naval", "hp": 240, "armor": 2,
-  "speed": 3.6, "vision": 8, "cost": { "wood": 65, "iron": 55 }, "buildTime": 14,
+  "speed": 3.6, "vision": 8, "cost": 120, "buildTime": 14,
   "weapons": [
     { "type": "shell", "damage": 7, "range": 5.5, "reload": 0.9, "projSpeed": 16 },
     { "type": "shell", "damage": 7, "range": 5.5, "reload": 0.9, "projSpeed": 16 },
@@ -34,7 +34,7 @@ what matters is the 1v1 results):
 And in `hive_bastion`:
 
 ```json
-"produces": ["mobile_command_vessel", "scout_skimmer", "fast_attack_boat",
+"produces": ["spore_harvester", "scout_skimmer", "fast_attack_boat",
              "torpedo_skimmer", "hydra_gunboat", "assault_cruiser",
              "drone_carrier", "gunship", "ew_disruptor"],
 ```
@@ -65,7 +65,7 @@ the game (9 = battleship main gun range) with a 1.0s reload — ~45
 armor-piercing dps at max range means it kills anything before taking a
 hit. (3) It costs 100 total — cheaper than an Assault Cruiser. It's a
 better everything for less. Fair-ish rescue keeping "tanky torpedo
-boat": `speed 2.4, hp 380, armor 4, cost 90w/110i, torpedo damage 40,
+boat": `speed 2.4, hp 380, armor 4, cost 200, torpedo damage 40,
 range 6.0, reload 3.2`. Tough for a torpedo platform, but slow, short-
 ranged, and priced like the cruiser it competes with.
 
@@ -74,7 +74,7 @@ ranged, and priced like the cruiser it competes with.
 ```json
 "outpost": {
   "name": "Resource Outpost", "kind": "outpost", "hp": 400, "armor": 3, "vision": 9,
-  "cost": { "wood": 60, "iron": 20 }, "buildTime": 15,
+  "cost": 65, "buildTime": 15,
   "weapons": [
     { "type": "aa", "damage": 6, "range": 6.0, "reload": 1.0, "projSpeed": 20, "targets": "air" }
   ]

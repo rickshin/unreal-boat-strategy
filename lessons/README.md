@@ -22,6 +22,14 @@ order; each has hands-on challenges against the real codebase, and each
 | 13 | [After the Render](lesson_13.md) | Post-processing: exposure, bloom & HDR glow, lens flares, TAA vs TSR |
 | 14 | [Bang: How a Gunshot Becomes a Sound](lesson_14.md) | Sim events → JSON sound names → decode cache → spatial audio; budgets and fog rules |
 
+**A note on game history:** the economy was originally two resources
+(wood and iron, mined by rigs on water nodes). It has since been
+replaced by a single resource — **KiTrin gas**, harvested from island
+geysers by flying harvesters — and the lessons teach the current game.
+Lesson 11 tells the story of that rebalance (and the code path it
+quietly orphaned); if a challenge answer ever seems to disagree with
+`git log`, that transition is usually why.
+
 **Ground rules:** rebuild after every C++ change (the command is in
 lesson 1), revert experiments when a challenge says so, and if the game
 ever behaves strangely, `git status` will show you what you've touched.

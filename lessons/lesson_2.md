@@ -9,8 +9,8 @@ why it's fast enough to update thousands of things 20 times a second.
 
 **Python:**
 ```python
-def unit_value(cost_wood, cost_iron):
-    return cost_wood + cost_iron
+def unit_value(cost, build_time):
+    return cost / build_time
 
 speed = 3.4
 names = ["Patrol Boat", "Destroyer"]
@@ -19,9 +19,9 @@ stats = {"hp": 260, "armor": 2}
 
 **C++ (the way this game writes it):**
 ```cpp
-int32 UnitValue(int32 CostWood, int32 CostIron)
+float UnitValue(int32 Cost, float BuildTime)
 {
-    return CostWood + CostIron;
+    return Cost / BuildTime;
 }
 
 float Speed = 3.4f;
@@ -117,10 +117,10 @@ error only** (the rest are often echoes), fix it, rebuild.
 Rebuild + run after each change (command in lesson 1).
 
 **Challenge 2.1 — Rich kid mode.**
-Find where a player's starting Wood (200) and Iron (100) are set (hint:
-it's a struct with default values in `Sim/SimGame.h`). Change them to
-1000 each, rebuild, and confirm in the top bar of the game. Then put
-them back — the game is balanced around the original numbers.
+Find where a player's starting KiTrin (150) is set (hint: it's a
+struct with default values in `Sim/SimGame.h`). Change it to 1000,
+rebuild, and confirm in the top bar of the game. Then put it back —
+the game is balanced around the original number.
 
 **Challenge 2.2 — Your first log line.**
 In `AACGameMode::StartMatch` (in `ACGameMode.cpp`) there's already a
